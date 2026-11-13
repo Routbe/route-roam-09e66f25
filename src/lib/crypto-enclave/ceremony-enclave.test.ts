@@ -141,6 +141,10 @@ describe("2-of-4 ceremony with the ROUT Card in the crypto enclave", () => {
     await forgetDeviceKey(userId);
     expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3) })).toBe("decrypt_failed");
     await forgetDeviceKey(userId);
+    console.log("DBG paper+card", await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), paperWords: begun.paperWords }));
+    await forgetDeviceKey(userId);
+    console.log("DBG prf+paper", await code("ceremony.restore", { userId, ceremony, keyId, prf: prfOf(6), paperWords: begun.paperWords }));
+    await forgetDeviceKey(userId);
     expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), paperWords: begun.paperWords })).keyId).toBe(keyId);
     await forgetDeviceKey(userId);
     const serverShare = openServerShard(ceremony, userId, SECRET);
