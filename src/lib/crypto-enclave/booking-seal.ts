@@ -26,7 +26,7 @@
  * buffers are wiped in `finally`.
  */
 import { sha256 } from "@noble/hashes/sha2.js";
-import { CardFactorError, toB64url } from "./card-factor";
+import { CardFactorError, parseCardFragment, toB64url } from "./card-factor";
 import { generateRecipientKeys, openEnvelope, PUBLIC_KEY_BYTES, sealEnvelope, type RecipientKeys } from "./pqc-envelope";
 
 export const BOOKING_PAYLOAD_VERSION = 1;
@@ -182,16 +182,12 @@ export function parseGuestFragment(fragment: string): Uint8Array {
   if (!raw.startsWith(prefix)) throw new BookingSealError();
   // Same strict 32-byte base64url rule as the card fragment.
   try {
-    const { parseCardFragment } = cardParser;
     return parseCardFragment(`rk1=${raw.slice(prefix.length)}`);
   } catch (e) {
     if (e instanceof CardFactorError) throw new BookingSealError();
     throw e;
   }
 }
-// Indirection keeps the import list explicit for the bundle-boundary test.
-import * as cardParser from "./card-factor";
-
 export type SealedBooking = { host: Uint8Array; guest: Uint8Array | null; commit: string };
 
 /**
