@@ -1850,7 +1850,8 @@ html[data-liquid]:not([data-theme="mechanical"]) [style*="--lg-filter"] { backdr
 .infra-hero-content .omni-bar { max-width: 550px; }
 .infra-hero-content .omni-bar > p { justify-content: center; }
 .sovereign-scene { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.sovereign-scene > div:last-child { position: absolute !important; inset: 0; }
+/* The canvas host only: while the scene loads, the fallback circle is the last child and must keep its own position. */
+.sovereign-scene > div:not(.sovereign-fallback) { position: absolute !important; inset: 0; }
 .sovereign-fallback { position: absolute; width: 460px; height: 460px; border: 1px dotted var(--infra-edge); border-radius: 50%; left: 50%; bottom: -180px; transform: translateX(-50%); }
 [data-scene-ready] .sovereign-fallback { display: none; }
 .sovereign-domains { position: absolute; bottom: 40px; left: 0; width: 100%; display: flex; flex-wrap: wrap; justify-content: center; gap: 28px; font: 10px var(--font-mono); color: var(--color-muted-foreground); }
