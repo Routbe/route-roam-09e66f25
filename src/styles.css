@@ -188,7 +188,7 @@ textarea[data-tour^="cc-"] {
   --secondary-foreground: 0 0% 15%;
 
   --muted: 40 20% 93%;
-  --muted-foreground: 30 6% 38%;
+  --muted-foreground: 30 6% 32%; /* >= 7:1 on every light surface (WCAG AAA) */
 
   /* Deep Matcha #2D4A3E */
   --accent: 155 24% 23%;
@@ -487,7 +487,7 @@ textarea[data-tour^="cc-"] {
   --card: 0 0% 100%;
   --card-foreground: 0 0% 10%;
   --muted: 40 20% 93%;
-  --muted-foreground: 30 6% 38%;
+  --muted-foreground: 30 6% 32%; /* >= 7:1 on every light surface (WCAG AAA) */
   --primary: 0 0% 10%;
   --primary-foreground: 0 0% 100%;
   --highlight: 150 24% 92%;
