@@ -182,17 +182,24 @@ export const enclave = {
     lock: (keyId?: string) => callEnclave("ledger.lock", keyId ? { keyId } : {}),
   },
   ceremony: {
-    /** Starts a 2-of-3 ceremony; `mnemonic` is the existing Master Key's words when this device has a key. */
-    begin: (userId: string, serverFactorKey: Uint8Array, mnemonic?: string) =>
-      callEnclave("ceremony.begin", mnemonic === undefined ? { userId, serverFactorKey } : { userId, serverFactorKey, mnemonic }, moved(serverFactorKey)),
+    /**
+     * Starts a ceremony; `mnemonic` is the existing Master Key's words when this device has a key.
+     * `cardSecret` (32 bytes from a freshly tapped ROUT Card fragment) makes it 2-of-4; transferred.
+     */
+    begin: (userId: string, serverFactorKey: Uint8Array, mnemonic?: string, cardSecret?: Uint8Array) =>
+      callEnclave(
+        "ceremony.begin",
+        { userId, serverFactorKey, ...(mnemonic === undefined ? {} : { mnemonic }), ...(cardSecret === undefined ? {} : { cardSecret }) },
+        moved(serverFactorKey, cardSecret),
+      ),
     checkWords: (handle: string, answers: { position: number; word: string }[]) => callEnclave("ceremony.checkWords", { handle, answers }),
     sealDevice: (handle: string, prf: Uint8Array) => callEnclave("ceremony.sealDevice", { handle, prf }, moved(prf)),
     commit: (handle: string, userId: string) => callEnclave("ceremony.commit", { handle, userId }),
     discard: (handle: string) => callEnclave("ceremony.discard", { handle }),
-    restore: (input: { userId: string; ceremony: RecoveryCeremony; keyId: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array }) =>
-      callEnclave("ceremony.restore", input, moved(input.prf, input.serverShare)),
-    recoverLogin: (input: { userId: string; ceremony: RecoveryCeremony; keyId: string; challenge: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array }) =>
-      callEnclave("ceremony.recoverLogin", input, moved(input.prf, input.serverShare)),
+    restore: (input: { userId: string; ceremony: RecoveryCeremony; keyId: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array; cardSecret?: Uint8Array }) =>
+      callEnclave("ceremony.restore", input, moved(input.prf, input.serverShare, input.cardSecret)),
+    recoverLogin: (input: { userId: string; ceremony: RecoveryCeremony; keyId: string; challenge: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array; cardSecret?: Uint8Array }) =>
+      callEnclave("ceremony.recoverLogin", input, moved(input.prf, input.serverShare, input.cardSecret)),
   },
   pairwise: {
     claim: (root: Uint8Array, sector: string, nonce: string) => callEnclave("pairwise.claim", { root, sector, nonce }, moved(root)),
