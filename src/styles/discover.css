@@ -421,21 +421,22 @@
 }
 
 /* Touch targets: every home-page control is at least 44x44 px (WCAG 2.5.5 AAA). Compact chips and dots
-   keep their look: the button itself grows to 44 px and the visible pill or dot is drawn inside it. */
+   keep their look: the button itself grows to 44 px and the visible pill or dot is drawn inside it.
+   The selectors out-rank the global hardware material for bare buttons, which would otherwise paint
+   the enlarged hit area as a second, outer pill. */
 .gateway-editorial :is(.infra-action, .story-chapter-cta, [data-spatial-control]) { min-height: 2.75rem; }
 .dsc-crumbs { align-items: center; margin-block: -15px 13px; }
 .dsc-crumbs a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
 @media (max-width: 639px) {
   .chapter-deck-tabs { padding-bottom: 7px; }
-  .chapter-deck-tabs button { position: relative; isolation: isolate; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 0; background: transparent; }
-  .chapter-deck-tabs button::before { content: ""; position: absolute; inset: 7px 0; z-index: -1; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-card); transition: border-color .2s, background .2s; }
-  .chapter-deck-tabs button[aria-current="true"] { background: transparent; }
-  .chapter-deck-tabs button[aria-current="true"]::before { background: var(--tp); border-color: color-mix(in oklab, var(--tp) 70%, white); }
+  .chapter-deck .chapter-deck-tabs > button[type="button"][data-topic] { position: relative; isolation: isolate; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 0; background: none; box-shadow: none; backdrop-filter: none; }
+  .chapter-deck-tabs > button[data-topic]::before { content: ""; position: absolute; inset: 7px 0; z-index: -1; border-radius: 999px; border: 1px solid var(--color-border); background: var(--color-card); transition: border-color .2s, background .2s; }
+  .chapter-deck-tabs > button[data-topic][aria-current="true"]::before { background: var(--tp); border-color: color-mix(in oklab, var(--tp) 70%, white); }
   .chapter-deck-nav button { width: 44px; height: 44px; }
 }
 @media (max-width: 640px) {
   .home-dots { gap: 0; margin-top: 0; }
-  .home-dots button, .home-dots button[aria-current="true"] { position: relative; width: 44px; height: 44px; border-radius: 0; background: transparent; }
-  .home-dots button::before { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; transform: translate(-50%, -50%); border-radius: 999px; background: hsl(var(--muted-foreground) / .35); transition: width .3s, background .3s; }
-  .home-dots button[aria-current="true"]::before { width: 22px; background: hsl(var(--primary)); }
+  .home-dots > button[type="button"][aria-label][aria-current] { position: relative; width: 44px; height: 44px; border: 0; border-radius: 0; background: none; box-shadow: none; backdrop-filter: none; }
+  .home-dots > button::before { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 7px; transform: translate(-50%, -50%); border-radius: 999px; background: hsl(var(--muted-foreground) / .35); transition: width .3s, background .3s; }
+  .home-dots > button[aria-current="true"]::before { width: 22px; background: hsl(var(--primary)); }
 }
