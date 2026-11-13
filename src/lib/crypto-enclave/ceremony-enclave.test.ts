@@ -161,7 +161,7 @@ describe("2-of-4 ceremony with the ROUT Card in the crypto enclave", () => {
     const { ceremony, keyId, paper } = await setup(userId);
     expect(ceremony.version).toBe(1);
     await forgetDeviceKey(userId);
-    expect(await code("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(1), paperWords: paper })).toBe("decrypt_failed");
+    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(1), paperWords: paper })).toBe("decrypt_failed");
   });
 
   it("a stored version 2 ceremony without its card shard is refused as input", async () => {
