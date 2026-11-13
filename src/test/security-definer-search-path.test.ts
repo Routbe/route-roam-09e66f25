@@ -31,14 +31,55 @@ const definers = snapshot.functions
   .filter((f) => isSecurityDefinerDef(f.def))
   .map((f) => ({ key: definerKey(f.schema, f.name, f.args), searchPath: searchPathFromDef(f.def) }));
 
-/** schema.name of every function a migration after 0258 creates (born pinned, so 0258 never names them). */
-const createdAfter0258 = new Set(
-  listMigrationFiles(DB_DIR)
-    .filter((f) => migrationNumber(f) > 258)
-    .flatMap((f) => [...readFileSync(join(DB_DIR, f), "utf8").matchAll(/create\s+(?:or\s+replace\s+)?function\s+(\w+)\.(\w+)\s*\(/gi)])
-    .map((m) => `${m[1]}.${m[2]}`),
-);
-const definersUpTo0258 = definers.filter((d) => !createdAfter0258.has(d.key.slice(0, d.key.indexOf("("))));
+/** Top-level argument count of a "(...)" list starting at `open` (nested parentheses and quotes skipped). */
+function arityAt(src: string, open: number): number | null {
+  let depth = 0;
+  let commas = 0;
+  let any = false;
+  let quoted = false;
+  for (let i = open; i < src.length; i++) {
+    const c = src[i]!;
+    if (c === "'") quoted = !quoted;
+    if (quoted) continue;
+    if (c === "(") depth++;
+    else if (c === ")") {
+      depth--;
+      if (depth === 0) return any ? commas + 1 : 0;
+    } else if (depth === 1) {
+      if (c === ",") commas++;
+      else if (!/\s/.test(c)) any = true;
+    }
+  }
+  return null;
+}
+const argCount = (args: string) => (args.trim() === "" ? 0 : arityAt(`(${args})`, 0)!);
+
+/** "schema.name/arity" of every function a set of migrations creates. */
+function createdIn(files: string[]): Set<string> {
+  const out = new Set<string>();
+  for (const f of files) {
+    const src = readFileSync(join(DB_DIR, f), "utf8");
+    for (const m of src.matchAll(/create\s+(?:or\s+replace\s+)?function\s+(\w+)\.(\w+)\s*\(/gi)) {
+      const n = arityAt(src, m.index! + m[0].length - 1);
+      if (n !== null) out.add(`${m[1]}.${m[2]}/${n}`);
+    }
+  }
+  return out;
+}
+
+/**
+ * Functions first created after 0258 (born pinned, so 0258 never names them),
+ * by name and argument count: a later migration that replaces a function 0258
+ * already pinned (or adds a new overload next to it) must not move it out of,
+ * or into, the 0258 set.
+ */
+const files = listMigrationFiles(DB_DIR);
+const createdUpTo0258 = createdIn(files.filter((f) => migrationNumber(f) <= 258));
+const bornAfter0258 = new Set([...createdIn(files.filter((f) => migrationNumber(f) > 258))].filter((k) => !createdUpTo0258.has(k)));
+const definersUpTo0258 = snapshot.functions
+  .filter((f) => isSecurityDefinerDef(f.def))
+  .filter((f) => !bornAfter0258.has(`${f.schema}.${f.name}/${argCount(f.args)}`))
+  .map((f) => ({ key: definerKey(f.schema, f.name, f.args), searchPath: searchPathFromDef(f.def) }));
 
 const BATCH_1 = [
   "public.rout_card_design(s text)",

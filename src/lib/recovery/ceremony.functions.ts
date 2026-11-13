@@ -1,6 +1,8 @@
 /**
- * 2-of-3 recovery ceremony: server boundary. The server stores only RVE1
- * envelopes and can open only its own shard (server_guardian). Saving or
+ * Recovery ceremony (2-of-3, or 2-of-4 with a ROUT Card shard): server
+ * boundary. The server stores only RVE1 envelopes and can open only its own
+ * shard (server_guardian); a save in which any other shard is sealed to ROUT's
+ * key is refused, so ROUT never holds two shares. Saving or
  * deleting needs a fresh passkey step-up; a restore hands out the stored
  * ceremony plus the opened server share, is rate limited fail-closed and
  * always e-mails the owner.
@@ -8,45 +10,36 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireAuth } from "@/lib/auth/middleware";
-import { B64_RE, CEREMONY_ID_RE, CEREMONY_RESTORES_PER_HOUR, MASTER_B64_MAX, SHARD_B64_MAX, type CeremonyWire } from "./ceremony-wire";
+import { B64_RE, CEREMONY_ID_RE, CEREMONY_RESTORES_PER_HOUR, MASTER_B64_MAX, SHARD_B64_MAX, type CeremonyRow } from "./ceremony-wire";
 
 const shard = z.string().min(64).max(SHARD_B64_MAX).regex(B64_RE);
 const wireSchema = z.object({
   ceremonyId: z.string().regex(CEREMONY_ID_RE),
   keyId: z.string().min(8).max(200).regex(/^[A-Za-z0-9_-]+$/),
   sealedMaster: z.string().min(40).max(MASTER_B64_MAX).regex(B64_RE),
-  // strict(): a version 2 ceremony (with a ROUT Card shard, nfc_card) is refused
-  // here until db-pending/0266 is live and this boundary stores the card shard.
-  // Stripping it instead would save a ceremony that can never be opened again.
-  shards: z.object({ device_prf: shard, paper_guardian: shard, server_guardian: shard }).strict(),
+  // nfc_card present = version 2 (2-of-4, db/0266). strict(): an unknown shard is
+  // refused, never stripped, so no ceremony is saved that can no longer open.
+  shards: z.object({ device_prf: shard, paper_guardian: shard, server_guardian: shard, nfc_card: shard.optional() }).strict(),
 });
 const credentialSchema = z.string().min(8).max(1400).regex(/^[A-Za-z0-9+/=_-]+$/);
-
-type Row = {
-  ceremony_id: string;
-  key_id: string;
-  sealed_master: string;
-  device_shard: string;
-  paper_shard: string;
-  server_shard: string;
-  device_credential: string;
-};
 
 async function audit(userId: string, eventType: string, payload: Record<string, unknown> = {}) {
   const { recordSecurityEvent } = await import("@/lib/audit-log.server");
   await recordSecurityEvent({ eventType, userId, payload });
 }
 
-/** Status only: whether a ceremony exists and for which Master Key. */
+/** Status only: whether a ceremony exists, for which Master Key, and 2-of-3 or 2-of-4. */
 export const getRecoveryCeremonyStatus = createServerFn({ method: "GET" })
   .middleware([requireAuth])
   .handler(async () => {
     const { sql } = await import("@/lib/neon");
-    const rows = (await sql`select * from public.rout_recovery_ceremony_status()`) as { ceremony_id: string; key_id: string; created_at: string }[];
+    const rows = (await sql`select * from public.rout_recovery_ceremony_status_v2()`) as { ceremony_id: string; key_id: string; created_at: string; ceremony_version: number }[];
     const r = rows[0];
     const login = r ? ((await sql`select public.rout_recovery_ceremony_login_key() is not null as ok`) as { ok: boolean }[]) : [];
     return {
-      ceremony: r ? { ceremonyId: r.ceremony_id, keyId: r.key_id, createdAt: String(r.created_at), canSignIn: login[0]?.ok === true } : null,
+      ceremony: r
+        ? { ceremonyId: r.ceremony_id, keyId: r.key_id, createdAt: String(r.created_at), canSignIn: login[0]?.ok === true, version: (Number(r.ceremony_version) === 2 ? 2 : 1) as 1 | 2 }
+        : null,
     };
   });
 
@@ -73,16 +66,23 @@ export const saveRecoveryCeremony = createServerFn({ method: "POST" })
     // The server shard must be sealed to ROUT's key for this member and open.
     const ceremony = ceremonyFromWire(c, context.userId);
     if (!isOwnServerShard(context.userId, ceremony.shards.server_guardian)) return { ok: false as const, error: "server_shard_mismatch" };
+    // No other shard may be sealed to ROUT's key: ROUT must never hold two shares.
+    const others = [ceremony.shards.device_prf, ceremony.shards.paper_guardian, ...(ceremony.version === 2 ? [ceremony.shards.nfc_card] : [])];
+    if (others.some((s) => isOwnServerShard(context.userId, s))) return { ok: false as const, error: "server_shard_mismatch" };
     try {
       openServerShard(ceremony, context.userId).fill(0);
     } catch {
       return { ok: false as const, error: "server_shard_mismatch" };
     }
     const { sql } = await import("@/lib/neon");
-    await sql`select public.rout_recovery_ceremony_put(${c.ceremonyId}, ${c.keyId}, ${c.sealedMaster}, ${c.shards.device_prf}, ${c.shards.paper_guardian}, ${c.shards.server_guardian}, ${data.deviceCredential}, ${data.loginKey})`;
+    if (c.shards.nfc_card === undefined) {
+      await sql`select public.rout_recovery_ceremony_put(${c.ceremonyId}, ${c.keyId}, ${c.sealedMaster}, ${c.shards.device_prf}, ${c.shards.paper_guardian}, ${c.shards.server_guardian}, ${data.deviceCredential}, ${data.loginKey})`;
+    } else {
+      await sql`select public.rout_recovery_ceremony_put(${c.ceremonyId}, ${c.keyId}, ${c.sealedMaster}, ${c.shards.device_prf}, ${c.shards.paper_guardian}, ${c.shards.server_guardian}, ${c.shards.nfc_card}, ${data.deviceCredential}, ${data.loginKey})`;
+    }
     const { notifyUser } = await import("@/lib/notifications.server");
     await notifyUser(context.userId, "recovery_vault_changed", { action: "saved" });
-    await audit(context.userId, "recovery_ceremony.saved", { ceremonyId: c.ceremonyId });
+    await audit(context.userId, "recovery_ceremony.saved", { ceremonyId: c.ceremonyId, version: ceremony.version });
     return { ok: true as const };
   });
 
@@ -110,16 +110,11 @@ export const beginCeremonyRestore = createServerFn({ method: "POST" })
       return { ok: false as const, error: "rate_limited" as const };
     }
     const { sql } = await import("@/lib/neon");
-    const rows = (await sql`select * from public.rout_recovery_ceremony_get()`) as Row[];
+    const rows = (await sql`select * from public.rout_recovery_ceremony_get_v2()`) as CeremonyRow[];
     const r = rows[0];
     if (!r) return { ok: false as const, error: "no_ceremony" as const };
-    const wire: CeremonyWire = {
-      ceremonyId: r.ceremony_id,
-      keyId: r.key_id,
-      sealedMaster: r.sealed_master,
-      shards: { device_prf: r.device_shard, paper_guardian: r.paper_shard, server_guardian: r.server_shard },
-    };
-    const { ceremonyFromWire, toB64 } = await import("./ceremony-wire");
+    const { ceremonyFromWire, ceremonyRowToWire, toB64 } = await import("./ceremony-wire");
+    const wire = ceremonyRowToWire(r);
     const { openServerShard } = await import("./server-factor.server");
     const share = openServerShard(ceremonyFromWire(wire, context.userId), context.userId);
     let serverShare: string;

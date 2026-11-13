@@ -4,6 +4,8 @@
  * the step-up dialog's Web NFC reader. Nothing here verifies anything: the
  * server checks the CMAC and the counter.
  */
+import { cardSecretFromUrl } from "@/lib/crypto-enclave/card-fragment";
+
 export type CardTapParams = { p: string; m: string };
 
 const P_RE = /^[0-9A-Fa-f]{32}$/;
@@ -47,6 +49,48 @@ export function tapFromNdefRecords(records: readonly NdefRecordLike[]): CardTapP
     if (found) return found;
   }
   return null;
+}
+
+/**
+ * The ROUT Card recovery secret (`#rk1=` fragment, card-fragment.ts) inside one
+ * NDEF message, only from a genuine /t tap URL; a fresh buffer the caller wipes.
+ */
+export function cardSecretFromNdefRecords(records: readonly NdefRecordLike[]): Uint8Array | null {
+  for (const r of records) {
+    if ((r.recordType !== "url" && r.recordType !== "absolute-url") || !r.data) continue;
+    const url = new TextDecoder().decode(r.data);
+    if (!parseCardTapUrl(url)) continue;
+    const secret = cardSecretFromUrl(url);
+    if (secret) return secret;
+  }
+  return null;
+}
+
+/**
+ * Reads one ROUT Card recovery secret with Web NFC (Chrome on Android). Resolves
+ * with the first tap that carries a valid fragment; a card without one (not yet
+ * re-personalised) calls onNoFragment and keeps listening. Rejects when NFC is
+ * unavailable, the permission is refused or the signal aborts.
+ */
+export async function scanCardSecret(signal: AbortSignal, onNoFragment?: () => void): Promise<Uint8Array> {
+  const Ctor = ndefCtor();
+  if (!Ctor) throw new Error("web_nfc_unavailable");
+  const reader = new Ctor();
+  return new Promise<Uint8Array>((resolve, reject) => {
+    const stop = () => reject(new DOMException("aborted", "AbortError"));
+    if (signal.aborted) return stop();
+    signal.addEventListener("abort", stop, { once: true });
+    reader.addEventListener("reading", (e) => {
+      if (signal.aborted) return;
+      const records = (e as NdefReadingEvent).message?.records ?? [];
+      const secret = cardSecretFromNdefRecords(records);
+      if (secret) {
+        signal.removeEventListener("abort", stop);
+        resolve(secret);
+      } else if (tapFromNdefRecords(records)) onNoFragment?.();
+    }, { signal });
+    reader.scan({ signal }).catch(reject);
+  });
 }
 
 /**

@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * db-pending/0266 (EXPAND, not on Neon): ROUT Card as fourth recovery shard.
+ * db/0266 (EXPAND): ROUT Card as fourth recovery shard.
  * Replays db/ on PGlite, applies 0266 and runs every function as rout_app with
  * a real transaction context. Checks: a 2-of-4 save stores the card shard as
  * version 2, the 0264-era reads never hand out a version 2 row, the 8-argument
@@ -16,7 +16,7 @@ import { definerMigrationViolations } from "../../scripts/security-definer-polic
 
 const ROOT = join(__dirname, "..", "..");
 const DB_DIR = join(ROOT, "db");
-const FILE = join(ROOT, "db-pending", "0266_recovery_card_factor.sql");
+const FILE = join(ROOT, "db", "0266_recovery_card_factor.sql");
 const SQL_0266 = readFileSync(FILE, "utf8");
 
 const ALICE = "00000000-0000-4000-8000-0000000000e1";
