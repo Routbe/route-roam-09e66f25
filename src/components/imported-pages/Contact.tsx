@@ -256,7 +256,7 @@ export default function Contact() {
               aria-selected={topic === item.id}
               onClick={() => pickTopic(item.id)}
               className={cn(
-                "rounded-lg px-2 py-2 text-xs font-medium transition-all md:text-sm",
+                "min-h-11 rounded-lg px-2 py-2 text-xs font-medium transition-all md:text-sm",
                 topic === item.id
                   ? "bg-background text-foreground shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
@@ -597,7 +597,7 @@ export default function Contact() {
           <div className={rowClass}>
             <a
               href={`mailto:${CONTACT_EMAIL}`}
-              className="flex min-w-0 items-center gap-2 text-sm text-foreground"
+              className="flex min-h-11 min-w-0 items-center gap-2 text-sm text-foreground"
             >
               <Mail className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
               <span className="truncate">{CONTACT_EMAIL}</span>
@@ -606,7 +606,7 @@ export default function Contact() {
               type="button"
               onClick={copyEmail}
               aria-label={t("contact.copy.aria")}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-border/60 text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
             >
               {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
