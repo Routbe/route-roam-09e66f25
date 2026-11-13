@@ -94,7 +94,13 @@
 - [ ] Fase A: OG-afbeelding/omschrijving per pagina en per taal nalopen; overige openbare pagina's (qr-, guide-, compare-, support-) door dezelfde meting
 - [ ] Fase B: zero-knowledge (client-side E2EE, blinde indexen, grootboek-invarianten) vanaf de eerste migratie
 - [ ] Fase G: W3C Verifiable Credentials / selectief-onthullend bewijs voor gastverificatie
-- [ ] Fase B+: E2EE-sleutels onder bestaande 2-van-3 Shamir-herstel (let op: huidige ceremonie = toestel-passkey + papieren sleutel + server-guardian; de NXP-kaart is nu een apart herstelslot, geen derde deel — keuze eigenaar nodig)
-- [ ] Fase B+: alle E2EE en RVE1-enveloppen hybride post-quantum (ML-KEM-1024)
+- [x] Fase B: herstel 2-van-4 (passkey, ROUT-kaart, server, papier) — cryptokern + werker + tests; kaartgeheim alleen in URL-fragment
+- [x] Fase B: db-pending/0266 kaartdeel herstel — getest in testdatabase (wacht op GO)
+- [ ] Fase B: herstel 2-van-4 aansluiten op scherm, opslag en herstel-login (na GO 0266)
+- [ ] Fase B: kaarten (her)personaliseren met #rk1-fragment (fabrieksstation) — fysieke kaarten nodig
+- [x] Fase B: versleutelde boekingsinhoud (bkh/bkg, ML-KEM-1024 + X25519, vaste emmers) — kern + tests
+- [ ] Fase B: 0265 grootboek aanpassen: vingerafdruk over versleutelde tekst i.p.v. platte velden
+- [ ] Fase B: migratie boekingsenveloppen + host-boekingssleutel (zaad onder werkruimtesleutel) + werker-ops
+- [ ] Fase B: gastcontact (e-mail) als kluisverwijzing + blinde index voor limieten per gast
 - [ ] Fase B+: vaste byte-lengtes (padding) en constante responstijden voor boekings- en bitmasker-API's
 - [ ] Fase B+: Omni-werker als blinde doorgeefluik, nooit toegang tot persoonlijke sleutels
