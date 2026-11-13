@@ -91,3 +91,7 @@
 - [ ] Fase A: 12 formaten + liggend — meting gedaan (geen overloop gevonden), 9-delige reeks afsnijden opgelost, wisselknop compact op gsm; nog: CLS/AAA/tikdoelen-rapport, ontwerpverfijning, OG-controle per pagina
 - [ ] Fase B: zero-knowledge (client-side E2EE, blinde indexen, grootboek-invarianten) vanaf de eerste migratie
 - [ ] Fase G: W3C Verifiable Credentials / selectief-onthullend bewijs voor gastverificatie
+- [ ] Fase B+: E2EE-sleutels onder bestaande 2-van-3 Shamir-herstel
+- [ ] Fase B+: alle E2EE en RVE1-enveloppen hybride post-quantum (ML-KEM-1024)
+- [ ] Fase B+: vaste byte-lengtes (padding) en constante responstijden voor boekings- en bitmasker-API's
+- [ ] Fase B+: Omni-werker als blinde doorgeefluik, nooit toegang tot persoonlijke sleutels
