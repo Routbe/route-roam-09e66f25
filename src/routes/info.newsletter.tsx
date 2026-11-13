@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { DocPage } from "@/components/mdx/DocPage";
 import { docHead } from "@/lib/docs-catalog";
-export const Route = createFileRoute("/info/newsletter")({ head: () => docHead("/info/newsletter"), component: Page });
+export const Route = createFileRoute("/info/newsletter")({ head: ({ match }) => docHead("/info/newsletter", match.context.locale), component: Page });
 function Page() { return <DocPage path="/info/newsletter" />; }
