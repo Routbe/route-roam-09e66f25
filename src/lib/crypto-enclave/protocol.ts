@@ -47,29 +47,31 @@ export interface EnclaveOps {
   "ledger.lock": { req: { keyId?: string }; res: null };
 
   /**
-   * 2-of-3 recovery ceremony (passkey + 24 paper words + ROUT's server piece).
+   * Recovery ceremony: 2-of-3 (passkey + 24 paper words + ROUT's server piece),
+   * or 2-of-4 when a freshly tapped ROUT Card is added (version 2).
    * The Master Key comes from the typed words, or is generated fresh for a
    * device without one; it is wiped inside `begin`. Only the paper words come
    * back, once, for display; the member retypes three of them before the
    * passkey seals the last shard.
    */
   "ceremony.begin": {
-    req: { userId: string; serverFactorKey: Uint8Array; mnemonic?: string };
-    res: { handle: string; paperWords: string; checkPositions: number[]; keyId: string; fresh: boolean };
+    /** cardSecret: 32 bytes from a freshly tapped ROUT Card's URL fragment (card-factor.ts); makes it 2-of-4. Transferred, wiped. */
+    req: { userId: string; serverFactorKey: Uint8Array; mnemonic?: string; cardSecret?: Uint8Array };
+    res: { handle: string; paperWords: string; checkPositions: number[]; keyId: string; fresh: boolean; version: 1 | 2 };
   };
   "ceremony.checkWords": { req: { handle: string; answers: { position: number; word: string }[] }; res: { ok: boolean } };
   "ceremony.sealDevice": { req: { handle: string; prf: Uint8Array }; res: { ceremony: RecoveryCeremony; keyId: string; loginKey: Uint8Array } };
   /** After the server stored the ceremony: installs a freshly made Master Key on this device. */
   "ceremony.commit": { req: { handle: string; userId: string }; res: { keyId: string } };
   "ceremony.discard": { req: { handle: string }; res: null };
-  /** Any two of passkey PRF, paper words and the server's opened share rebuild and install the key. */
+  /** Any two of passkey PRF, paper words, ROUT Card secret and the server's opened share rebuild and install the key. */
   "ceremony.restore": {
-    req: { userId: string; ceremony: RecoveryCeremony; keyId: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array };
+    req: { userId: string; ceremony: RecoveryCeremony; keyId: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array; cardSecret?: Uint8Array };
     res: { keyId: string };
   };
   /** Sign-in by recovery: same as restore, plus an Ed25519 signature over the server challenge. */
   "ceremony.recoverLogin": {
-    req: { userId: string; ceremony: RecoveryCeremony; keyId: string; challenge: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array };
+    req: { userId: string; ceremony: RecoveryCeremony; keyId: string; challenge: string; prf?: Uint8Array; paperWords?: string; serverShare?: Uint8Array; cardSecret?: Uint8Array };
     res: { keyId: string; signature: Uint8Array };
   };
   /** Pairwise partner subject from a passkey PRF root (transferred, wiped). */

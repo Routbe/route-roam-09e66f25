@@ -37,8 +37,10 @@ import { vaultContext } from "@/lib/vault/vault-context";
 import { sha256 } from "@noble/hashes/sha2.js";
 import { ed25519 } from "@noble/curves/ed25519.js";
 import { CHALLENGE_RE, recoveryLoginMessage } from "@/lib/recovery/recovery-login";
+import { cardFactorKeys } from "./card-factor";
 import {
   RECOVERY_FACTORS,
+  VERSION_FACTORS,
   RecoveryError,
   beginRecoveryCeremony,
   completeRecoveryCeremony,
@@ -153,12 +155,13 @@ function checkPositions(): number[] {
  * in `finally`, also on every failure.
  */
 async function rebuildMaster<T extends object>(
-  input: { userId: unknown; ceremony: unknown; keyId: unknown; prf?: unknown; paperWords?: unknown; serverShare?: unknown },
+  input: { userId: unknown; ceremony: unknown; keyId: unknown; prf?: unknown; paperWords?: unknown; serverShare?: unknown; cardSecret?: unknown },
   then: (entropy: Uint8Array, owner: string) => Promise<T>,
 ): Promise<T & { keyId: string }> {
   const owner = str(input.userId, 64);
   const output = input.prf === undefined ? null : bytes(input.prf);
   const server = input.serverShare === undefined ? null : bytes(input.serverShare);
+  const card = input.cardSecret === undefined ? null : bytes(input.cardSecret);
   const secrets: Uint8Array[] = [];
   let entropy: Uint8Array | null = null;
   try {
@@ -179,6 +182,12 @@ async function rebuildMaster<T extends object>(
       }
       secrets.push(factorSecretKeys.paper_guardian);
     }
+    if (card) {
+      // The ROUT Card's fragment secret (card-factor.ts); never seen by a server.
+      if (card.byteLength !== 32) fail("invalid_input");
+      factorSecretKeys.nfc_card = cardFactorKeys(card, owner).secretKey;
+      secrets.push(factorSecretKeys.nfc_card);
+    }
     const openedShares = server ? { server_guardian: server.slice() } : undefined;
     try {
       entropy = await recoverMasterKey({ ceremony: stored, memberId: owner, factorSecretKeys, openedShares });
@@ -194,7 +203,7 @@ async function rebuildMaster<T extends object>(
     await saveDeviceKey(owner, key);
     return { ...extra, keyId: key.keyId };
   } finally {
-    wipe(entropy, output, server, ...secrets);
+    wipe(entropy, output, server, card, ...secrets);
   }
 }
 
@@ -203,15 +212,23 @@ function ceremonyOf(v: unknown, userId: string): RecoveryCeremony {
   if (typeof v !== "object" || v === null) return fail("invalid_input");
   const c = v as Record<string, unknown>;
   const shards = c.shards as Record<string, unknown> | undefined;
-  if (c.version !== 1 || c.threshold !== 2 || c.memberId !== userId || typeof c.ceremonyId !== "string" || !/^[0-9a-f]{32}$/.test(c.ceremonyId)) fail("invalid_input");
+  if ((c.version !== 1 && c.version !== 2) || c.threshold !== 2 || c.memberId !== userId || typeof c.ceremonyId !== "string" || !/^[0-9a-f]{32}$/.test(c.ceremonyId)) fail("invalid_input");
   if (!shards || typeof shards !== "object") fail("invalid_input");
-  const out = {} as Record<(typeof RECOVERY_FACTORS)[number], Uint8Array>;
+  const version = c.version as 1 | 2;
+  const expected = VERSION_FACTORS[version];
+  const out: Partial<Record<(typeof RECOVERY_FACTORS)[number], Uint8Array>> = {};
   for (const f of RECOVERY_FACTORS) {
+    const present = shards?.[f] !== undefined && shards?.[f] !== null;
+    // Exactly the version's factor set: a missing or an extra shard is refused.
+    if (present !== expected.includes(f)) fail("invalid_input");
+    if (!present) continue;
     const b = bytes(shards?.[f]);
     if (b.byteLength > ENVELOPE_MAX_BYTES) fail("invalid_input");
     out[f] = b;
   }
-  return { version: 1, ceremonyId: c.ceremonyId as string, memberId: userId, threshold: 2, sealedMaster: bytes(c.sealedMaster), shards: out };
+  const base = { ceremonyId: c.ceremonyId as string, memberId: userId, threshold: 2 as const, sealedMaster: bytes(c.sealedMaster) };
+  const core = { device_prf: out.device_prf as Uint8Array, paper_guardian: out.paper_guardian as Uint8Array, server_guardian: out.server_guardian as Uint8Array };
+  return version === 2 ? { ...base, version: 2, shards: { ...core, nfc_card: out.nfc_card as Uint8Array } } : { ...base, version: 1, shards: core };
 }
 
 function discardVault(handle: string) {
@@ -453,15 +470,18 @@ export const handlers: Handlers = {
     return storeMaster(userId, entropy);
   },
 
-  async "ceremony.begin"({ userId, serverFactorKey, mnemonic }) {
+  async "ceremony.begin"({ userId, serverFactorKey, mnemonic, cardSecret }) {
     const owner = str(userId, 64);
     if (!UUID.test(owner)) fail("invalid_input");
     const serverKey = bytes(serverFactorKey);
     if (serverKey.byteLength !== PUBLIC_KEY_BYTES) fail("invalid_input");
+    const card = cardSecret === undefined ? null : bytes(cardSecret);
     const device = await loadDeviceKey(owner);
     let entropy: Uint8Array | null = null;
     let paperSecret: Uint8Array | null = null;
+    let cardKeySecret: Uint8Array | null = null;
     try {
+      if (card && card.byteLength !== 32) fail("invalid_input");
       if (mnemonic !== undefined) {
         try {
           entropy = masterKeyFromMnemonic(str(mnemonic, 1024));
@@ -480,10 +500,13 @@ export const handlers: Handlers = {
       wipe(login.secretKey);
       const paper = createPaperFactor(owner);
       paperSecret = paper.keys.secretKey;
+      // With a freshly tapped ROUT Card the ceremony becomes 2-of-4 (version 2).
+      const cardKeys = card ? cardFactorKeys(card, owner) : null;
+      cardKeySecret = cardKeys?.secretKey ?? null;
       const { draft, deviceShare } = await beginRecoveryCeremony({
         masterKey: entropy,
         memberId: owner,
-        factorPublicKeys: { paper_guardian: paper.keys.publicKey, server_guardian: serverKey },
+        factorPublicKeys: { paper_guardian: paper.keys.publicKey, server_guardian: serverKey, ...(cardKeys ? { nfc_card: cardKeys.publicKey } : {}) },
       });
       const words = paper.mnemonic.split(" ");
       const positions = checkPositions();
@@ -502,9 +525,9 @@ export const handlers: Handlers = {
         expiresAt: Date.now() + PENDING_TTL,
         timer: setTimeout(() => discardCeremony(handle), PENDING_TTL),
       });
-      return { handle, paperWords: paper.mnemonic, checkPositions: positions.map((p) => p + 1), keyId: key.keyId, fresh: !device };
+      return { handle, paperWords: paper.mnemonic, checkPositions: positions.map((p) => p + 1), keyId: key.keyId, fresh: !device, version: draft.version };
     } finally {
-      wipe(entropy, paperSecret);
+      wipe(entropy, paperSecret, card, cardKeySecret);
     }
   },
 
@@ -560,17 +583,17 @@ export const handlers: Handlers = {
     return null;
   },
 
-  async "ceremony.restore"({ userId, ceremony, keyId, prf, paperWords, serverShare }) {
-    return rebuildMaster({ userId, ceremony, keyId, prf, paperWords, serverShare }, async () => ({}));
+  async "ceremony.restore"({ userId, ceremony, keyId, prf, paperWords, serverShare, cardSecret }) {
+    return rebuildMaster({ userId, ceremony, keyId, prf, paperWords, serverShare, cardSecret }, async () => ({}));
   },
 
   /** Sign-in by recovery: rebuild, sign the server challenge, install, wipe everything. */
-  async "ceremony.recoverLogin"({ userId, ceremony, keyId, prf, paperWords, serverShare, challenge }) {
+  async "ceremony.recoverLogin"({ userId, ceremony, keyId, prf, paperWords, serverShare, cardSecret, challenge }) {
     const ch = str(challenge, 64);
     if (!CHALLENGE_RE.test(ch)) {
       fail("invalid_input");
     }
-    return rebuildMaster({ userId, ceremony, keyId, prf, paperWords, serverShare }, async (entropy, owner) => {
+    return rebuildMaster({ userId, ceremony, keyId, prf, paperWords, serverShare, cardSecret }, async (entropy, owner) => {
       const message = (() => {
         try {
           return recoveryLoginMessage(owner, ch);

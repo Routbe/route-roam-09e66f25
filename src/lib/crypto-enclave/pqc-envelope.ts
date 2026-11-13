@@ -10,8 +10,8 @@
  * Layout (all fixed except the AEAD body):
  *   0   4    magic "RVE1" (checked by db/0221)
  *   4   1    suite (1 = this construction)
- *   5   1    token kind (1 vtk, 2 vcc, 3 mpc, 4 sdm)
- *   6   1    key holder (1 server vault, 2 member device, 3 shard factor)
+ *   5   1    token kind (1 vtk, 2 vcc, 3 mpc, 4 sdm; booking blobs 5 bkh, 6 bkg)
+ *   6   1    key holder (1 server vault, 2 member device, 3 shard factor, 4 booking guest)
  *   7   16   recipient key id = SHA-256("rout.rve1.kid" || publicKey)[0..16)
  *   23  1600 hybrid KEM ciphertext (ML-KEM-1024 1568 || X25519 32)
  *   1623 24  nonce
@@ -22,7 +22,9 @@
  *
  * Who may hold the decryption key is fixed per kind (owner decision):
  * vtk and sdm the server vault, vcc only the member's device, mpc only the
- * shard's own factor. Sealing to, or opening as, any other holder is refused.
+ * shard's own factor. Booking blobs (booking-seal.ts, never stored in the
+ * vault): bkh only the host's device, bkg only the guest's own link key.
+ * Sealing to, or opening as, any other holder is refused.
  *
  * Every opening failure throws the same EnvelopeError: no oracle about which
  * check failed. Shared secrets and derived keys are wiped in `finally`; the
@@ -41,7 +43,12 @@ export const RVE1_SUITE_LABEL = "ROUT-RVE1-KitchenSink-KEM(ML-KEM-1024,X25519)-X
 
 const kem = createKitchenSink(RVE1_SUITE_LABEL, ml_kem1024, _ecdhKem(x25519), shake256, sha512);
 
-export type KeyHolder = "server_vault" | "member_device" | "shard_factor";
+export type KeyHolder = "server_vault" | "member_device" | "shard_factor" | "booking_guest";
+
+/** End-to-end encrypted booking blobs: host copy and guest copy. Never vault tokens. */
+export const BOOKING_ENVELOPE_KINDS = ["bkh", "bkg"] as const;
+export type BookingEnvelopeKind = (typeof BOOKING_ENVELOPE_KINDS)[number];
+export type EnvelopeKind = OpaqueTokenKind | BookingEnvelopeKind;
 
 /** Owner-confirmed policy: who may ever decrypt each kind. */
 export const KIND_KEY_HOLDER: Readonly<Record<OpaqueTokenKind, KeyHolder>> = Object.freeze({
@@ -51,10 +58,22 @@ export const KIND_KEY_HOLDER: Readonly<Record<OpaqueTokenKind, KeyHolder>> = Obj
   sdm: "server_vault",
 });
 
+/** Owner requirement (2026-11-13): no server-side holder can ever open a booking blob. */
+export const BOOKING_KIND_KEY_HOLDER: Readonly<Record<BookingEnvelopeKind, KeyHolder>> = Object.freeze({
+  bkh: "member_device",
+  bkg: "booking_guest",
+});
+
+function holderOf(kind: EnvelopeKind): KeyHolder | undefined {
+  if (Object.hasOwn(KIND_KEY_HOLDER, kind)) return KIND_KEY_HOLDER[kind as OpaqueTokenKind];
+  if (Object.hasOwn(BOOKING_KIND_KEY_HOLDER, kind)) return BOOKING_KIND_KEY_HOLDER[kind as BookingEnvelopeKind];
+  return undefined;
+}
+
 const MAGIC = Uint8Array.of(0x52, 0x56, 0x45, 0x31); // "RVE1"
 const SUITE = 1;
-const KIND_CODE: Readonly<Record<OpaqueTokenKind, number>> = Object.freeze({ vtk: 1, vcc: 2, mpc: 3, sdm: 4 });
-const HOLDER_CODE: Readonly<Record<KeyHolder, number>> = Object.freeze({ server_vault: 1, member_device: 2, shard_factor: 3 });
+const KIND_CODE: Readonly<Record<EnvelopeKind, number>> = Object.freeze({ vtk: 1, vcc: 2, mpc: 3, sdm: 4, bkh: 5, bkg: 6 });
+const HOLDER_CODE: Readonly<Record<KeyHolder, number>> = Object.freeze({ server_vault: 1, member_device: 2, shard_factor: 3, booking_guest: 4 });
 
 const KID_LEN = 16;
 const KEM_CT_LEN = 1600;
@@ -134,14 +153,14 @@ export function publicKeyOf(secretKey: Uint8Array): Uint8Array {
 }
 
 export function sealEnvelope(input: {
-  kind: OpaqueTokenKind;
+  kind: EnvelopeKind;
   holder: KeyHolder;
   recipientPublicKey: Uint8Array;
   plaintext: Uint8Array;
   context: string;
 }): Uint8Array {
   const { kind, holder, recipientPublicKey, plaintext } = input;
-  if (KIND_KEY_HOLDER[kind] !== holder) throw new EnvelopePolicyError("holder_not_allowed_for_kind");
+  if (holderOf(kind) !== holder) throw new EnvelopePolicyError("holder_not_allowed_for_kind");
   if (plaintext.length > ENVELOPE_MAX_PLAINTEXT) throw new EnvelopePolicyError("plaintext_too_large");
   if (recipientPublicKey.length !== PUBLIC_KEY_BYTES) throw new EnvelopePolicyError("public_key_invalid");
   const context = contextBytes(input.context);
@@ -182,14 +201,14 @@ export function envelopeKeyId(envelope: Uint8Array): Uint8Array {
 /** Opens an envelope as `holder`. Throws EnvelopeError on any mismatch or tamper. */
 export function openEnvelope(input: {
   envelope: Uint8Array;
-  expectedKind: OpaqueTokenKind;
+  expectedKind: EnvelopeKind;
   holder: KeyHolder;
   secretKey: Uint8Array;
   context: string;
 }): Uint8Array {
   const { envelope, expectedKind, holder, secretKey } = input;
   // Policy errors are programming errors on our side, not attacker input: keep them distinct.
-  if (KIND_KEY_HOLDER[expectedKind] !== holder) throw new EnvelopePolicyError("holder_not_allowed_for_kind");
+  if (holderOf(expectedKind) !== holder) throw new EnvelopePolicyError("holder_not_allowed_for_kind");
   const context = contextBytes(input.context);
 
   let sharedSecret: Uint8Array | undefined;

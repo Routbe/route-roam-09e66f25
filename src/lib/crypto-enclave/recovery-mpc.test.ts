@@ -10,6 +10,7 @@ import {
   openFactorShard,
   paperFactorKeys,
   recoverMasterKey,
+  type RecoveryCeremony,
   type RecoveryFactor,
 } from "./recovery-mpc";
 
@@ -72,14 +73,14 @@ describe("2-of-3 recovery", async () => {
     // Shards of two ceremonies mixed.
     const other = await createRecoveryCeremony({ masterKey: master, memberId: ALICE, factorPublicKeys: pub });
     expect(other.ceremonyId).not.toBe(ceremony.ceremonyId);
-    const mixed = { ...ceremony, shards: { ...ceremony.shards, server_guardian: other.shards.server_guardian } };
+    const mixed = { ...ceremony, shards: { ...ceremony.shards, server_guardian: other.shards.server_guardian } } as RecoveryCeremony;
     await expect(recoverMasterKey({ ceremony: mixed, memberId: ALICE, factorSecretKeys: pick("device_prf", "server_guardian") })).rejects.toThrow(RecoveryError);
   });
 
   it("detects a tampered shard or sealed Master Key", async () => {
     const shard = ceremony.shards.device_prf.slice();
     shard[shard.length - 1] = (shard[shard.length - 1] ?? 0) ^ 1;
-    await expect(recoverMasterKey({ ceremony: { ...ceremony, shards: { ...ceremony.shards, device_prf: shard } }, memberId: ALICE, factorSecretKeys: pick("device_prf", "server_guardian") })).rejects.toThrow(RecoveryError);
+    await expect(recoverMasterKey({ ceremony: { ...ceremony, shards: { ...ceremony.shards, device_prf: shard } } as RecoveryCeremony, memberId: ALICE, factorSecretKeys: pick("device_prf", "server_guardian") })).rejects.toThrow(RecoveryError);
     const sealed = ceremony.sealedMaster.slice();
     sealed[30] = (sealed[30] ?? 0) ^ 1;
     await expect(recoverMasterKey({ ceremony: { ...ceremony, sealedMaster: sealed }, memberId: ALICE, factorSecretKeys: pick("device_prf", "server_guardian") })).rejects.toThrow(RecoveryError);

@@ -49,6 +49,9 @@ use the editor.
 - Root-level boundaries never wrap a lazy public shell, and MDX doc pages are preloaded in the router's hydrate hook (src/components/mdx/doc-modules.ts). Why: a still-loading lazy module during hydration blanks the server HTML on any provider update.
 - Public controls are at least 44x44 px (WCAG 2.5.5 AAA); compact chips draw their visible pill inside the larger button and short text links use the tap-wide utility. Why: touch targets grow without changing the look.
 
+## Zero-knowledge booking payloads
+- Booking titles, descriptions, notes and intake answers exist server-side only as RVE1 envelopes from src/lib/crypto-enclave/booking-seal.ts: kind bkh (host device key, seed sealed under the workspace key) and bkg (guest key from the manage-link fragment), padded to fixed buckets and bound to host, payload id and copy role; the ledger stores a commitment over the ciphertext. Why: neither the server nor Neon may ever hold plaintext or a key that opens it, and envelope sizes must not reveal text length.
+
 ## Discover pages
 - Product landing pages live at /discover/<topic>; slugs, main buttons and detail links come from src/lib/discover/topics.ts and per-locale copy from copy.<locale>.ts, with accents in src/styles/discover.css. Why: one source keeps the home page, detail-page buttons and sitemap pointing at the same product pages instead of the sign-in wall.
 

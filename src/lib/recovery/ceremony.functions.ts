@@ -15,7 +15,10 @@ const wireSchema = z.object({
   ceremonyId: z.string().regex(CEREMONY_ID_RE),
   keyId: z.string().min(8).max(200).regex(/^[A-Za-z0-9_-]+$/),
   sealedMaster: z.string().min(40).max(MASTER_B64_MAX).regex(B64_RE),
-  shards: z.object({ device_prf: shard, paper_guardian: shard, server_guardian: shard }),
+  // strict(): a version 2 ceremony (with a ROUT Card shard, nfc_card) is refused
+  // here until db-pending/0266 is live and this boundary stores the card shard.
+  // Stripping it instead would save a ceremony that can never be opened again.
+  shards: z.object({ device_prf: shard, paper_guardian: shard, server_guardian: shard }).strict(),
 });
 const credentialSchema = z.string().min(8).max(1400).regex(/^[A-Za-z0-9+/=_-]+$/);
 
