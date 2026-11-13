@@ -134,26 +134,25 @@ describe("2-of-4 ceremony with the ROUT Card in the crypto enclave", () => {
     const answers = begun.checkPositions.map((position) => ({ position, word: words[position - 1] ?? "" }));
     await call("ceremony.checkWords", { handle: begun.handle, answers });
     const sealed = await call("ceremony.sealDevice", { handle: begun.handle, prf: prfOf(6) });
-    const ceremony = sealed.ceremony as RecoveryCeremony;
-    expect(ceremony.version).toBe(2);
+    const stored = sealed.ceremony as RecoveryCeremony;
+    expect(stored.version).toBe(2);
+    // The worker wipes every byte array it receives (as after a transfer): each call gets a fresh copy.
+    const copy = (c: RecoveryCeremony) => structuredClone(c);
+    const ceremony = copy(stored);
     const { keyId } = await call("ceremony.commit", { handle: begun.handle, userId });
 
     await forgetDeviceKey(userId);
-    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3) })).toBe("decrypt_failed");
+    expect(await code("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(3) })).toBe("decrypt_failed");
     await forgetDeviceKey(userId);
-    console.log("DBG paper+card", await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), paperWords: begun.paperWords }));
+    expect((await call("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(3), paperWords: begun.paperWords })).keyId).toBe(keyId);
     await forgetDeviceKey(userId);
-    console.log("DBG prf+paper", await code("ceremony.restore", { userId, ceremony, keyId, prf: prfOf(6), paperWords: begun.paperWords }));
+    const serverShare = openServerShard(copy(stored), userId, SECRET);
+    expect((await call("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(3), serverShare })).keyId).toBe(keyId);
     await forgetDeviceKey(userId);
-    expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), paperWords: begun.paperWords })).keyId).toBe(keyId);
-    await forgetDeviceKey(userId);
-    const serverShare = openServerShard(ceremony, userId, SECRET);
-    expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), serverShare })).keyId).toBe(keyId);
-    await forgetDeviceKey(userId);
-    expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), prf: prfOf(6) })).keyId).toBe(keyId);
+    expect((await call("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(3), prf: prfOf(6) })).keyId).toBe(keyId);
     // Another card does not count as the card factor.
     await forgetDeviceKey(userId);
-    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(4), paperWords: begun.paperWords })).toBe("decrypt_failed");
+    expect(await code("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(4), paperWords: begun.paperWords })).toBe("decrypt_failed");
   });
 
   it("refuses a card secret that is not 32 bytes, and a card on a 2-of-3 ceremony", async () => {
@@ -162,7 +161,7 @@ describe("2-of-4 ceremony with the ROUT Card in the crypto enclave", () => {
     const { ceremony, keyId, paper } = await setup(userId);
     expect(ceremony.version).toBe(1);
     await forgetDeviceKey(userId);
-    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(1), paperWords: paper })).toBe("decrypt_failed");
+    expect(await code("ceremony.restore", { userId, ceremony: copy(stored), keyId, cardSecret: cardOf(1), paperWords: paper })).toBe("decrypt_failed");
   });
 
   it("a stored version 2 ceremony without its card shard is refused as input", async () => {
