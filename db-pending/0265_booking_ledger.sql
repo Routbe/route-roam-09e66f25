@@ -173,7 +173,7 @@ begin
   e.host_seq := coalesce(v_last.host_seq, 0) + 1;
   e.prev_hash := coalesce(v_last.entry_hash, public.rout_booking_ledger_genesis(b.host_user_id));
   -- Never earlier than the previous event: the chain's clock only moves forward.
-  e.occurred_at := pg_catalog.greatest(pg_catalog.clock_timestamp(), coalesce(v_last.occurred_at, '-infinity'::timestamptz));
+  e.occurred_at := greatest(pg_catalog.clock_timestamp(), coalesce(v_last.occurred_at, '-infinity'::timestamptz));
   e.booking_id := b.id;
   e.group_id := b.group_id;
   e.event_type_id := b.event_type_id;
@@ -266,7 +266,7 @@ language sql stable security definer set search_path = pg_catalog, pg_temp as $$
    where e.host_user_id = public.rout_booking_ledger_caller()
      and e.host_seq > coalesce(p_after, 0)
    order by e.host_seq
-   limit pg_catalog.least(pg_catalog.greatest(coalesce(p_limit, 500), 1), 1000)
+   limit least(greatest(coalesce(p_limit, 500), 1), 1000)
 $$;
 
 create or replace function public.rout_booking_ledger_attestations(p_after bigint, p_limit integer)
@@ -277,7 +277,7 @@ language sql stable security definer set search_path = pg_catalog, pg_temp as $$
    where a.host_user_id = public.rout_booking_ledger_caller()
      and a.host_seq > coalesce(p_after, 0)
    order by a.host_seq, a.key_id
-   limit pg_catalog.least(pg_catalog.greatest(coalesce(p_limit, 500), 1), 4000)
+   limit least(greatest(coalesce(p_limit, 500), 1), 4000)
 $$;
 
 -- Recomputes every link of the caller's chain in the database.
@@ -360,7 +360,7 @@ language sql stable security definer set search_path = pg_catalog, pg_temp as $$
    where p_key_id ~ '^[0-9a-f]{32}$'
      and not exists (select 1 from public.booking_event_attestations a
                       where a.host_user_id = e.host_user_id and a.host_seq = e.host_seq and a.key_id = p_key_id)
-   limit pg_catalog.least(pg_catalog.greatest(coalesce(p_limit, 50), 1), 500)
+   limit least(greatest(coalesce(p_limit, 50), 1), 500)
 $$;
 
 -- The caller's unsigned events (for this key), each with the signature this
@@ -377,7 +377,7 @@ language sql stable security definer set search_path = pg_catalog, pg_temp as $$
      and not exists (select 1 from public.booking_event_attestations a
                       where a.host_user_id = e.host_user_id and a.host_seq = e.host_seq and a.key_id = p_key_id)
    order by e.host_seq
-   limit pg_catalog.least(pg_catalog.greatest(coalesce(p_limit, 200), 1), 1000)
+   limit least(greatest(coalesce(p_limit, 200), 1), 1000)
 $$;
 
 -- Stores a signature for one of the caller's own events. The database cannot

@@ -164,12 +164,28 @@ function ChapterDeck({ chapters, label, prevLabel, nextLabel, children }: { chap
     const rail = railRef.current;
     const panel = rail?.children[active] as HTMLElement | undefined;
     if (!rail || !panel || typeof ResizeObserver === "undefined") return;
-    const measure = () => setHeight(getComputedStyle(rail).overflowX === "auto" ? panel.offsetHeight : null);
+    // scrollHeight, not offsetHeight: late-revealing content (images, fonts, reveal
+    // animations) must never be clipped by the rail's overflow-y: hidden.
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setHeight(getComputedStyle(rail).overflowX === "auto" ? Math.ceil(Math.max(panel.scrollHeight, panel.getBoundingClientRect().height)) : null));
+    };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(panel);
     ro.observe(rail);
-    return () => ro.disconnect();
+    for (const child of Array.from(panel.children)) ro.observe(child);
+    rail.addEventListener("scrollend", measure);
+    rail.addEventListener("transitionend", measure);
+    panel.addEventListener("load", measure, true);
+    return () => {
+      ro.disconnect();
+      cancelAnimationFrame(frame);
+      rail.removeEventListener("scrollend", measure);
+      rail.removeEventListener("transitionend", measure);
+      panel.removeEventListener("load", measure, true);
+    };
   }, [active]);
 
   // Keep the active tab visible inside the tab strip without moving the page.

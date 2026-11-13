@@ -393,7 +393,7 @@
   .chapter-deck-tabs::-webkit-scrollbar { display: none; }
   .chapter-deck-tabs button { flex: 0 0 auto; padding: 8px 14px; border-radius: 999px; font: 500 12px/1 var(--font-mono); letter-spacing: .02em; color: var(--color-muted-foreground); border: 1px solid var(--color-border); background: var(--color-card); transition: color .2s, border-color .2s, background .2s; }
   .chapter-deck-tabs button[aria-current="true"] { color: oklch(0.15 0.02 160); background: var(--tp); border-color: color-mix(in oklab, var(--tp) 70%, white); }
-  .chapter-deck-rail { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; transition: height .3s ease; }
+  .chapter-deck-rail { display: flex; align-items: flex-start; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; transition: height .3s cubic-bezier(.2,.7,.2,1); contain: layout paint; }
   .chapter-deck-rail::-webkit-scrollbar { display: none; }
   .chapter-deck-rail > .story-chapter { flex: 0 0 100%; min-width: 0; scroll-snap-align: start; scroll-snap-stop: always; padding-block: 24px 32px; }
   .gateway-editorial .chapter-deck-rail > .story-chapter[data-topic] { border: 1px solid color-mix(in oklab, var(--tp) 22%, transparent); border-inline: 0; background: radial-gradient(90% 50% at 50% 0%, color-mix(in oklab, var(--tp) 7%, transparent), transparent 70%); }

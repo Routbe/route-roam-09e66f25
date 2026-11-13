@@ -84,3 +84,10 @@
 - [ ] Fase E: vergaderruimtes, betalingen, annuleringsbeleid
 - [ ] Fase F: boekings-, beheer- en hostpagina's, mails NL/EN/FR/DE
 - [ ] Fase G: intake-versleuteling, ROUT ID, Wallet, MCP-hulpmiddelen
+
+## Vervolg 2026-11-13 (goedgekeurd plan)
+- [x] Stap 0: 0265 greatest/least hersteld, naar db-pending tot GO
+- [x] Stap 0: volledige testsuite groen (2805/2805)
+- [ ] Fase A: 12 formaten + liggend — meting gedaan (geen overloop gevonden), 9-delige reeks afsnijden opgelost, wisselknop compact op gsm; nog: CLS/AAA/tikdoelen-rapport, ontwerpverfijning, OG-controle per pagina
+- [ ] Fase B: zero-knowledge (client-side E2EE, blinde indexen, grootboek-invarianten) vanaf de eerste migratie
+- [ ] Fase G: W3C Verifiable Credentials / selectief-onthullend bewijs voor gastverificatie
