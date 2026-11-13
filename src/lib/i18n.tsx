@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -197,11 +198,13 @@ export function I18nProvider({
   // After hydration: a route pin wins; otherwise only an explicit device choice the server could not see
   // (localStorage without cookie) changes the language. No change, no re-render: a needless languageChanged
   // event would force server-rendered Suspense boundaries back to their loading state.
+  const hydratedServerLocale = useRef(serverLocale);
   useEffect(() => {
-    const next = initialLocale ?? (serverLocale === undefined || hasExplicitLocale() ? detectLocale() : serverLocale);
+    const rendered = hydratedServerLocale.current;
+    const next = initialLocale ?? (rendered === undefined || hasExplicitLocale() ? detectLocale() : rendered);
     setLocaleState((current) => (current === next ? current : next));
     if (i18next.language !== next) void i18next.changeLanguage(next);
-  }, [initialLocale, serverLocale]);
+  }, [initialLocale]);
 
   useEffect(() => {
     document.documentElement.lang = locale;

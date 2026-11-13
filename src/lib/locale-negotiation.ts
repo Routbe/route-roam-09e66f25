@@ -9,7 +9,7 @@
 export const NEGOTIABLE_LOCALES = ["nl", "en", "fr", "de"] as const;
 export type NegotiatedLocale = (typeof NEGOTIABLE_LOCALES)[number];
 
-function isNegotiable(value: unknown): value is NegotiatedLocale {
+export function isNegotiableLocale(value: unknown): value is NegotiatedLocale {
   return typeof value === "string" && (NEGOTIABLE_LOCALES as readonly string[]).includes(value);
 }
 
@@ -25,14 +25,14 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Neg
       const q = qParam ? Number.parseFloat(qParam.slice(2)) : 1;
       return { tag: rawTag.trim().toLowerCase().split("-")[0] ?? "", q: Number.isFinite(q) ? q : 0, index };
     })
-    .filter((entry) => entry.q > 0 && isNegotiable(entry.tag))
+    .filter((entry) => entry.q > 0 && isNegotiableLocale(entry.tag))
     .sort((a, b) => b.q - a.q || a.index - b.index);
   return (ranked[0]?.tag as NegotiatedLocale | undefined) ?? null;
 }
 
 export function negotiateLocale(input: { cookie?: string | null; acceptLanguage?: string | null }): NegotiatedLocale {
   const cookie = input.cookie ? safeDecode(input.cookie) : null;
-  if (isNegotiable(cookie)) return cookie;
+  if (isNegotiableLocale(cookie)) return cookie;
   return localeFromAcceptLanguage(input.acceptLanguage) ?? "en";
 }
 
