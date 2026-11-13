@@ -18,4 +18,10 @@ it("dbg", async () => {
     const m = await recoverMasterKey({ ceremony: c, memberId: userId, factorSecretKeys: { device_prf: factorKeys("device_prf", new Uint8Array(32).fill(6), userId).secretKey, paper_guardian: paperFactorKeys(b.paperWords, userId).secretKey } });
     console.log("DBG ok", m.length);
   } catch (e) { console.log("DBG fail", e); }
+  const c2 = await runEnclaveOp("ceremony.commit", { handle: b.handle, userId });
+  console.log("DBG commit", JSON.stringify(c2).slice(0,100));
+  const { forgetDeviceKey } = await import("@/lib/e2ee/device-key");
+  await forgetDeviceKey(userId);
+  const r = await runEnclaveOp("ceremony.restore", { userId, ceremony: c, keyId: (c2 as any).result.keyId, prf: new Uint8Array(32).fill(6), paperWords: b.paperWords });
+  console.log("DBG restore", JSON.stringify(r));
 });
