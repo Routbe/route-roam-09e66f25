@@ -39,8 +39,9 @@ import "@/lib/env";
 import { notFound, redirect } from "@tanstack/react-router";
 import { appMode, detectShellMode, isAdminMode, isAdminPath, isModeFixed, modeDecision } from "@/lib/app-mode";
 
-// Shells load lazily; the public build statically drops the admin shell (dead branch), so no admin code leaks.
-const PublicAppShell = lazy(() => import("@/components/shells/PublicAppShell"));
+// The public shell is imported statically: a lazy root boundary blanked every server-rendered page while
+// it hydrated. Only the admin shell loads lazily; the public build statically drops it (dead branch).
+import PublicAppShell from "@/components/shells/PublicAppShell";
 const AdminAppShell =
   import.meta.env["VITE_APP_MODE"] === "public" ? null : lazy(() => import("@/components/shells/AdminAppShell"));
 
