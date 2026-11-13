@@ -18442,9 +18442,35 @@
           "default": null,
           "identity": null,
           "generated": null
+        },
+        {
+          "name": "card_shard",
+          "type": "text",
+          "notNull": false,
+          "default": null,
+          "identity": null,
+          "generated": null
+        },
+        {
+          "name": "ceremony_version",
+          "type": "smallint",
+          "notNull": true,
+          "default": "1",
+          "identity": null,
+          "generated": null
         }
       ],
       "constraints": [
+        {
+          "name": "recovery_ceremonies_card_distinct",
+          "kind": "c",
+          "def": "CHECK (((card_shard IS NULL) OR ((card_shard <> device_shard) AND (card_shard <> paper_shard) AND (card_shard <> server_shard))))"
+        },
+        {
+          "name": "recovery_ceremonies_card_shard_check",
+          "kind": "c",
+          "def": "CHECK (((card_shard IS NULL) OR (((char_length(card_shard) >= 64) AND (char_length(card_shard) <= 6000)) AND (card_shard ~ '^[A-Za-z0-9+/]+={0,2}$'::text))))"
+        },
         {
           "name": "recovery_ceremonies_ceremony_id_check",
           "kind": "c",
@@ -18494,6 +18520,11 @@
           "name": "recovery_ceremonies_user_id_fkey",
           "kind": "f",
           "def": "FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE"
+        },
+        {
+          "name": "recovery_ceremonies_version_card",
+          "kind": "c",
+          "def": "CHECK ((((ceremony_version = 1) AND (card_shard IS NULL)) OR ((ceremony_version = 2) AND (card_shard IS NOT NULL))))"
         }
       ],
       "indexes": [],
@@ -29874,7 +29905,13 @@
       "schema": "public",
       "name": "rout_recovery_ceremony_get",
       "args": "",
-      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_get()\n RETURNS TABLE(ceremony_id text, key_id text, sealed_master text, device_shard text, paper_shard text, server_shard text, device_credential text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\n  select c.ceremony_id, c.key_id, c.sealed_master, c.device_shard, c.paper_shard, c.server_shard, c.device_credential\n    from public.recovery_ceremonies c\n   where c.user_id = public.rout_current_user_id();\n$function$"
+      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_get()\n RETURNS TABLE(ceremony_id text, key_id text, sealed_master text, device_shard text, paper_shard text, server_shard text, device_credential text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\n  select c.ceremony_id, c.key_id, c.sealed_master, c.device_shard, c.paper_shard, c.server_shard, c.device_credential\n    from public.recovery_ceremonies c\n   where c.user_id = public.rout_current_user_id() and c.ceremony_version = 1;\n$function$"
+    },
+    {
+      "schema": "public",
+      "name": "rout_recovery_ceremony_get_v2",
+      "args": "",
+      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_get_v2()\n RETURNS TABLE(ceremony_id text, key_id text, sealed_master text, device_shard text, paper_shard text, server_shard text, card_shard text, ceremony_version smallint, device_credential text)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\n  select c.ceremony_id, c.key_id, c.sealed_master, c.device_shard, c.paper_shard, c.server_shard,\n         c.card_shard, c.ceremony_version, c.device_credential\n    from public.recovery_ceremonies c\n   where c.user_id = public.rout_current_user_id();\n$function$"
     },
     {
       "schema": "public",
@@ -29885,14 +29922,26 @@
     {
       "schema": "public",
       "name": "rout_recovery_ceremony_put",
+      "args": "p_ceremony_id text, p_key_id text, p_sealed_master text, p_device_shard text, p_paper_shard text, p_server_shard text, p_card_shard text, p_device_credential text, p_login_key text",
+      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_put(p_ceremony_id text, p_key_id text, p_sealed_master text, p_device_shard text, p_paper_shard text, p_server_shard text, p_card_shard text, p_device_credential text, p_login_key text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\ndeclare v_user uuid := public.rout_current_user_id();\nbegin\n  if v_user is null then raise exception 'no member context' using errcode = '42501'; end if;\n  if p_login_key is null then raise exception 'login key required' using errcode = '22023'; end if;\n  if p_card_shard is null then raise exception 'card shard required' using errcode = '22023'; end if;\n  insert into public.recovery_ceremonies as c\n    (user_id, ceremony_id, key_id, sealed_master, device_shard, paper_shard, server_shard, card_shard, ceremony_version,\n     device_credential, login_key, created_at)\n  values (v_user, p_ceremony_id, p_key_id, p_sealed_master, p_device_shard, p_paper_shard, p_server_shard, p_card_shard, 2,\n          p_device_credential, p_login_key, pg_catalog.now())\n  on conflict (user_id) do update set\n    ceremony_id = excluded.ceremony_id, key_id = excluded.key_id, sealed_master = excluded.sealed_master,\n    device_shard = excluded.device_shard, paper_shard = excluded.paper_shard, server_shard = excluded.server_shard,\n    card_shard = excluded.card_shard, ceremony_version = 2,\n    device_credential = excluded.device_credential, login_key = excluded.login_key, created_at = excluded.created_at;\nend $function$"
+    },
+    {
+      "schema": "public",
+      "name": "rout_recovery_ceremony_put",
       "args": "p_ceremony_id text, p_key_id text, p_sealed_master text, p_device_shard text, p_paper_shard text, p_server_shard text, p_device_credential text, p_login_key text",
-      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_put(p_ceremony_id text, p_key_id text, p_sealed_master text, p_device_shard text, p_paper_shard text, p_server_shard text, p_device_credential text, p_login_key text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\ndeclare v_user uuid := public.rout_current_user_id();\nbegin\n  if v_user is null then raise exception 'no member context' using errcode = '42501'; end if;\n  if p_login_key is null then raise exception 'login key required' using errcode = '22023'; end if;\n  insert into public.recovery_ceremonies as c\n    (user_id, ceremony_id, key_id, sealed_master, device_shard, paper_shard, server_shard, device_credential, login_key, created_at)\n  values (v_user, p_ceremony_id, p_key_id, p_sealed_master, p_device_shard, p_paper_shard, p_server_shard, p_device_credential, p_login_key, pg_catalog.now())\n  on conflict (user_id) do update set\n    ceremony_id = excluded.ceremony_id, key_id = excluded.key_id, sealed_master = excluded.sealed_master,\n    device_shard = excluded.device_shard, paper_shard = excluded.paper_shard, server_shard = excluded.server_shard,\n    device_credential = excluded.device_credential, login_key = excluded.login_key, created_at = excluded.created_at;\nend $function$"
+      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_put(p_ceremony_id text, p_key_id text, p_sealed_master text, p_device_shard text, p_paper_shard text, p_server_shard text, p_device_credential text, p_login_key text)\n RETURNS void\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\ndeclare v_user uuid := public.rout_current_user_id();\nbegin\n  if v_user is null then raise exception 'no member context' using errcode = '42501'; end if;\n  if p_login_key is null then raise exception 'login key required' using errcode = '22023'; end if;\n  insert into public.recovery_ceremonies as c\n    (user_id, ceremony_id, key_id, sealed_master, device_shard, paper_shard, server_shard, card_shard, ceremony_version,\n     device_credential, login_key, created_at)\n  values (v_user, p_ceremony_id, p_key_id, p_sealed_master, p_device_shard, p_paper_shard, p_server_shard, null, 1,\n          p_device_credential, p_login_key, pg_catalog.now())\n  on conflict (user_id) do update set\n    ceremony_id = excluded.ceremony_id, key_id = excluded.key_id, sealed_master = excluded.sealed_master,\n    device_shard = excluded.device_shard, paper_shard = excluded.paper_shard, server_shard = excluded.server_shard,\n    card_shard = null, ceremony_version = 1,\n    device_credential = excluded.device_credential, login_key = excluded.login_key, created_at = excluded.created_at;\nend $function$"
     },
     {
       "schema": "public",
       "name": "rout_recovery_ceremony_status",
       "args": "",
-      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_status()\n RETURNS TABLE(ceremony_id text, key_id text, created_at timestamp with time zone)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\n  select c.ceremony_id, c.key_id, c.created_at from public.recovery_ceremonies c\n   where c.user_id = public.rout_current_user_id();\n$function$"
+      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_status()\n RETURNS TABLE(ceremony_id text, key_id text, created_at timestamp with time zone)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\n  select c.ceremony_id, c.key_id, c.created_at from public.recovery_ceremonies c\n   where c.user_id = public.rout_current_user_id() and c.ceremony_version = 1;\n$function$"
+    },
+    {
+      "schema": "public",
+      "name": "rout_recovery_ceremony_status_v2",
+      "args": "",
+      "def": "CREATE OR REPLACE FUNCTION public.rout_recovery_ceremony_status_v2()\n RETURNS TABLE(ceremony_id text, key_id text, created_at timestamp with time zone, ceremony_version smallint)\n LANGUAGE sql\n STABLE SECURITY DEFINER\n SET search_path TO 'pg_catalog', 'pg_temp'\nAS $function$\n  select c.ceremony_id, c.key_id, c.created_at, c.ceremony_version from public.recovery_ceremonies c\n   where c.user_id = public.rout_current_user_id();\n$function$"
     },
     {
       "schema": "public",

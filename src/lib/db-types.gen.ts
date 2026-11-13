@@ -1773,6 +1773,8 @@ export interface PublicRecoveryCeremoniesRow {
   "device_credential": string;
   "created_at": string | Date;
   "login_key": string | null;
+  "card_shard": string | null;
+  "ceremony_version": number;
 }
 
 export interface PublicReferralsRow {
