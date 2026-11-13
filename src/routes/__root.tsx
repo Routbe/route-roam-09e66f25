@@ -37,11 +37,11 @@ import { ErrorBoundary, StaleChunkReload, willAutoReload } from "@/components/Er
 import { LanguageSync } from "@/components/LanguageSync";
 import "@/lib/env";
 import { notFound, redirect } from "@tanstack/react-router";
+import PublicAppShell from "@/components/shells/PublicAppShell";
 import { appMode, detectShellMode, isAdminMode, isAdminPath, isModeFixed, modeDecision } from "@/lib/app-mode";
 
 // The public shell is imported statically: a lazy root boundary blanked every server-rendered page while
 // it hydrated. Only the admin shell loads lazily; the public build statically drops it (dead branch).
-import PublicAppShell from "@/components/shells/PublicAppShell";
 const AdminAppShell =
   import.meta.env["VITE_APP_MODE"] === "public" ? null : lazy(() => import("@/components/shells/AdminAppShell"));
 
