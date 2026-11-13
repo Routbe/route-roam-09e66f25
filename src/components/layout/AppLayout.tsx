@@ -78,7 +78,7 @@ export function AppLayout({
                     aria-label={t("ui.breadcrumb")}
                     className="mb-2 flex items-center gap-1 text-xs text-muted-foreground"
                   >
-                    <Link to="/" className="hover:text-foreground">
+                    <Link to="/" className="tap-wide inline-flex min-h-11 items-center hover:text-foreground">
                       ROUT
                     </Link>
                     {crumbs.map((c) => (
@@ -139,7 +139,7 @@ export function AppLayout({
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/explore" className="hidden px-2 text-sm text-muted-foreground hover:text-foreground sm:inline">
+            <Link to="/explore" className="hidden min-h-11 items-center px-2 text-sm text-muted-foreground hover:text-foreground sm:inline-flex">
               {t("explore.crumb")}
             </Link>
             <HeaderControls>

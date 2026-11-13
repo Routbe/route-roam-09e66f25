@@ -59,7 +59,7 @@ export function LanguageToggle({ className }: { className?: string }) {
             onKeyDown={(e) => onKeyDown(e, index)}
             onClick={() => void setLocale(id)}
             className={cn(
-              "inline-flex h-7 px-2.5 items-center justify-center rounded-full text-[11px] font-medium tracking-wide transition-colors",
+              "inline-flex h-11 min-w-11 px-2.5 items-center justify-center rounded-full text-[11px] font-medium tracking-wide transition-colors",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
               active
                 ? "bg-foreground text-background"
