@@ -423,6 +423,7 @@
 /* Touch targets: every home-page control is at least 44x44 px (WCAG 2.5.5 AAA). Compact chips and dots
    keep their look: the button itself grows to 44 px and the visible pill or dot is drawn inside it. */
 .gateway-editorial :is(.infra-action, .story-chapter-cta, [data-spatial-control]) { min-height: 2.75rem; }
+.dsc-crumbs { align-items: center; margin-block: -15px 13px; }
 .dsc-crumbs a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
 @media (max-width: 639px) {
   .chapter-deck-tabs { padding-bottom: 7px; }
