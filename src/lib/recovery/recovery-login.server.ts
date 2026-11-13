@@ -21,20 +21,13 @@ export async function resolveMemberByEmail(email: string): Promise<string | null
   return UUID.test(memberId) ? memberId : null;
 }
 
-export type CeremonyRow = {
-  ceremony_id: string;
-  key_id: string;
-  sealed_master: string;
-  device_shard: string;
-  paper_shard: string;
-  server_shard: string;
-  device_credential: string;
-};
+import type { CeremonyRow } from "./ceremony-wire";
+export type { CeremonyRow } from "./ceremony-wire";
 
 /** The member's ceremony and login key, read in the member's own context. */
 export async function ceremonyForMember(memberId: string): Promise<{ row: CeremonyRow; loginKey: string } | null> {
   return withDbContext({ userId: memberId, workspaceId: null }, async () => {
-    const rows = (await sql`select * from public.rout_recovery_ceremony_get()`) as CeremonyRow[];
+    const rows = (await sql`select * from public.rout_recovery_ceremony_get_v2()`) as CeremonyRow[];
     const key = (await sql`select public.rout_recovery_ceremony_login_key() as k`) as { k: string | null }[];
     const row = rows[0];
     const loginKey = key[0]?.k;

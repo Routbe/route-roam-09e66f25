@@ -1,5 +1,6 @@
 /**
- * /recovery: sign-in for a member who is locked out, with 2 of 3 factors.
+ * /recovery: sign-in for a member who is locked out, with 2 of their 3 or 4
+ * factors (passkey, paper words, ROUT's share, and the ROUT Card on 2-of-4).
  *
  *   1. startRecoveryLogin   e-mail in; a 6-digit code goes to the account's
  *                           address. Always the same answer (no enumeration).
@@ -14,7 +15,6 @@
  */
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import type { CeremonyWire } from "./ceremony-wire";
 
 const emailSchema = z.string().trim().toLowerCase().max(254).regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 
@@ -65,13 +65,8 @@ export const openRecoveryLogin = createServerFn({ method: "POST" })
     if (!found) return { ok: false as const, error: "no_ceremony" as const };
 
     const r = found.row;
-    const wire: CeremonyWire = {
-      ceremonyId: r.ceremony_id,
-      keyId: r.key_id,
-      sealedMaster: r.sealed_master,
-      shards: { device_prf: r.device_shard, paper_guardian: r.paper_shard, server_guardian: r.server_shard },
-    };
-    const { ceremonyFromWire, toB64 } = await import("./ceremony-wire");
+    const { ceremonyFromWire, ceremonyRowToWire, toB64 } = await import("./ceremony-wire");
+    const wire = ceremonyRowToWire(r);
     const { openServerShard } = await import("./server-factor.server");
     const share = openServerShard(ceremonyFromWire(wire, memberId), memberId);
     let serverShare: string;

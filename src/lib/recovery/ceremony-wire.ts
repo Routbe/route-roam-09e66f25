@@ -50,6 +50,37 @@ export function ceremonyFromWire(w: CeremonyWire, memberId: string): RecoveryCer
   return card === undefined || card === null ? { ...base, version: 1, shards: core } : { ...base, version: 2, shards: { ...core, nfc_card: fromB64(card) } };
 }
 
+/** A stored ceremony as the version-aware reads (db/0266 *_v2) return it. */
+export type CeremonyRow = {
+  ceremony_id: string;
+  key_id: string;
+  sealed_master: string;
+  device_shard: string;
+  paper_shard: string;
+  server_shard: string;
+  card_shard: string | null;
+  ceremony_version: number;
+  device_credential: string;
+};
+
+/**
+ * Wire form of a stored ceremony. A version 2 row must carry its card shard and
+ * a version 1 row must not; anything else is refused rather than guessed, so a
+ * 2-of-4 ceremony is never handed out (or opened) as 2-of-3.
+ */
+export function ceremonyRowToWire(r: CeremonyRow): CeremonyWire {
+  const core = { device_prf: r.device_shard, paper_guardian: r.paper_shard, server_guardian: r.server_shard };
+  const version = Number(r.ceremony_version);
+  if (version === 1 && r.card_shard === null) return { ceremonyId: r.ceremony_id, keyId: r.key_id, sealedMaster: r.sealed_master, shards: core };
+  if (version === 2 && typeof r.card_shard === "string" && r.card_shard.length > 0) {
+    return { ceremonyId: r.ceremony_id, keyId: r.key_id, sealedMaster: r.sealed_master, shards: { ...core, nfc_card: r.card_shard } };
+  }
+  throw new TypeError("invalid_ceremony_row");
+}
+
+/** 2-of-3 (version 1) or 2-of-4 (version 2, with a ROUT Card shard). */
+export const wireVersion = (w: CeremonyWire): 1 | 2 => (w.shards.nfc_card === undefined ? 1 : 2);
+
 /** Number of words typed so far (for enabling a button; the words themselves are not kept). */
 export function wordCount(text: string): number {
   const t = text.trim();
