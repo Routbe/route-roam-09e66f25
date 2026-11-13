@@ -4,6 +4,9 @@
  * every later read runs in the member's own context.
  */
 import { sql, withDbContext } from "@/lib/neon";
+import type { CeremonyRow } from "./ceremony-wire";
+
+export type { CeremonyRow } from "./ceremony-wire";
 
 export const RECOVERY_CHALLENGE_PREFIX = "rout-recovery:";
 export const RECOVERY_CHALLENGE_TTL_MS = 5 * 60_000;
@@ -21,8 +24,6 @@ export async function resolveMemberByEmail(email: string): Promise<string | null
   return UUID.test(memberId) ? memberId : null;
 }
 
-import type { CeremonyRow } from "./ceremony-wire";
-export type { CeremonyRow } from "./ceremony-wire";
 
 /** The member's ceremony and login key, read in the member's own context. */
 export async function ceremonyForMember(memberId: string): Promise<{ row: CeremonyRow; loginKey: string } | null> {
