@@ -44,7 +44,8 @@ export type SdmTapChallenge = {
   readonly envelope: Uint8Array;
   readonly lastCounter: number | null;
 };
-export type SdmTapPurpose = "public_proof" | "step_up";
+/** recovery_factor (db-pending/0267): own, unrevoked card for the 2-of-4 recovery vault; spends the grant, completes nothing. */
+export type SdmTapPurpose = "public_proof" | "step_up" | "recovery_factor";
 export type SdmCardState = "active" | "unactivated";
 /** What a card step-up proof will cover: one card action, or general sensitive actions. */
 export type CardStepUpScope = "*" | "card_reveal" | "card_lifecycle";
@@ -417,7 +418,7 @@ export class LocalPostgresVaultAdapter implements IVaultPort {
   }
 
   async consumeSdmTap(caller: VaultCaller | null, grant: TapGrant, purpose: SdmTapPurpose): Promise<SdmCardState | null> {
-    if (!isTapGrant(grant) || (purpose !== "public_proof" && purpose !== "step_up")) throw new VaultDeniedError();
+    if (!isTapGrant(grant) || (purpose !== "public_proof" && purpose !== "step_up" && purpose !== "recovery_factor")) throw new VaultDeniedError();
     const rows = await this.exec(caller ? callerId(caller) : NO_CALLER, "select granted, card_state from vault_enclave.consume_sdm_tap($1, $2)", [grant, purpose], { serializable: true });
     const row = z.object({ granted: z.boolean(), card_state: z.enum(["active", "unactivated"]).nullable() }).safeParse(rows[0]);
     return row.success && row.data.granted && row.data.card_state ? row.data.card_state : null;
