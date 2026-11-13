@@ -131,7 +131,7 @@ export function AppLayout({
         )}
       >
         <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Link to="/" className="shrink-0" aria-label={t("ui.routHome")}>
+          <Link to="/" className="inline-flex min-h-11 shrink-0 items-center" aria-label={t("ui.routHome")}>
             <RoutLogo size={28} />
           </Link>
           <div className="hidden sm:block">
