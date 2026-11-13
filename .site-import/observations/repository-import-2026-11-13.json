@@ -1,0 +1,15 @@
+{
+  "source": "https://github.com/Routbe/rout-travel-planner-713b9116",
+  "kind": "source-repository",
+  "permissionConfirmed": true,
+  "excluded": [".git", "node_modules", ".lovable/project.json (kept this project's)"],
+  "credentialsCopied": false,
+  "databaseMigrationsApplied": false,
+  "checks": [
+    {"route": "/", "layout": "desktop", "viewport": {"width": 1280, "height": 1800}, "trigger": "page load", "observed": "home renders, no console errors", "status": "passed", "screenshot": "/tmp/browser/repo/screenshots/desktop_home.png"},
+    {"route": "/", "layout": "desktop", "viewport": {"width": 1280, "height": 1800}, "trigger": "Open menu, then Escape", "observed": "platform menu shows QR generator; Escape closes", "status": "passed"},
+    {"route": "/", "layout": "phone", "viewport": {"width": 390, "height": 844}, "trigger": "page load", "observed": "home renders, no console errors", "status": "passed"},
+    {"route": "/", "layout": "phone", "viewport": {"width": 390, "height": 844}, "trigger": "Open menu, then Escape", "observed": "menu opens and closes", "status": "passed"},
+    {"route": "sign-in and account pages", "trigger": "sign-in", "observed": "server logs: no runtime database configured (DATABASE_URL secret not set)", "status": "blocked"}
+  ]
+}
