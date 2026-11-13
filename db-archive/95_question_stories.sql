@@ -1,0 +1,12 @@
+-- ARCHIVED 2026-11-13 — never run. Placeholder for a migration whose file no longer exists.
+-- Kept outside db/ so no migration runner can pick it up.
+--
+-- Neon recorded 95_question_stories.sql in public.schema_migrations on 2026-10-19
+-- (checksum 9e282f2bb6c5c67743864d20dd511dd6a32a1a588e9d4a8755b7dcc0dc035fa5).
+-- The original text is not in any of the repository's commits, so it cannot be
+-- restored byte for byte. What it did survives in db/0000_baseline.sql: the
+-- profile_questions.story_until column and the profile_questions_story_idx index.
+-- A fresh database therefore ends in the same schema without this file.
+--
+-- The row in Neon is acknowledged in scripts/migration-history-allowlist.ts and
+-- checked by scripts/migration-history-check.ts.

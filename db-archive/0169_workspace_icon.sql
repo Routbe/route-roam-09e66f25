@@ -1,0 +1,13 @@
+-- ARCHIVED 2026-11-13 — never run. Placeholder for a migration whose file no longer exists.
+-- Kept outside db/ so no migration runner can pick it up.
+--
+-- Neon recorded 0169_workspace_icon.sql in public.schema_migrations on 2026-11-02
+-- (checksum 9568b4ef232aaeedd02ee9b590894bb8175f1f6851a197eba556d14a15d443f7).
+-- It shared the number 0169 with db/0169_workspace_social_links.sql, and numbers
+-- from 0111 on must be unique, so the same change was re-issued as
+-- db/0172_workspace_icon.sql (workspaces.icon + workspaces_icon_key), written to
+-- be a no-op where the column already exists. The original text is not in any of
+-- the repository's commits.
+--
+-- The row in Neon is acknowledged in scripts/migration-history-allowlist.ts and
+-- checked by scripts/migration-history-check.ts.
