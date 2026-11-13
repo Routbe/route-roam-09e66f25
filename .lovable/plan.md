@@ -31,6 +31,14 @@ Oplevering: voor/na-schermafbeeldingen per formaat + rapport van de automatische
 - Per migratie: RLS voor `rout_app` en `rout_omni_worker`, `search_path = pg_catalog, pg_temp`, expliciete EXECUTE-rechten, PGlite-test (`*-postgres.test.ts`), snapshot + types bijgewerkt. Afsluitende stappen in `db-pending/` tot de health-check het juiste niveau meldt.
 Oplevering: migraties + tests getoond aan jou, daarna GO per migratie.
 
+## Harde eisen voor Fase B t/m G (jouw toevoeging)
+1. **Zero-knowledge versleuteling in de browser**: titels, beschrijvingen, notities en intake-antwoorden worden in de browser versleuteld (crypto-enclave-werker, sleutel via WebAuthn PRF / toestelgebonden hoofdsleutel). Server en Neon krijgen alleen versleutelde blobs en zien nooit platte tekst.
+2. **Conflicten via blinde indexen**: bezetting alleen als tijdslot-bitmaskers (`bitmap.ts`) en blinde hashes. De server weet *dat* een slot bezet is, niet door wie of waarvoor.
+3. **Wiskundige invarianten in het grootboek (0265)**: database-triggers en RPC's dwingen af dat er geen dubbele boekingen en geen splitsing in de toestand kunnen ontstaan: één keten per host, `(host, prev_hash)` uniek, vergrendeling per (host, UTC-dag), en elke toestandsovergang gecontroleerd tegen de herafgespeelde toestand.
+4. **Cryptografische gastverificatie (Fase G)**: inchecken en verifiëren gebeurt met W3C Verifiable Credentials en een selectief-onthullend bewijs dat de gast een geldig tijdslot bezit, zonder dat zijn identiteit wordt onthuld.
+
+Gevolg voor de host: wie de versleutelde inhoud van een afspraak wil lezen, moet zijn passkey of toestel ontgrendelen. Mails naar de gast bevatten alleen wat de gast zelf heeft opgegeven.
+
 ## Fase C — Koppelingen en synchronisatie (code klaar en lokaal getest, live na sleutels)
 - Google: OAuth, `events.watch`, syncToken-delta, kanaalvernieuwing.
 - Microsoft: OAuth, subscriptions, deltaLink, vernieuwing.
