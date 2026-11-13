@@ -201,7 +201,7 @@ export async function deliverCardSecret(listener: CardListener, secret: Uint8Arr
     const epk = b64u(new Uint8Array(await crypto.subtle.exportKey("raw", eph.publicKey)));
     const key = await channelKey(eph.privateKey, listener.pub, listener.sid, listener.purpose, "encrypt");
     const iv = crypto.getRandomValues(new Uint8Array(12));
-    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aad(listener.sid, listener.purpose, listener.pub, epk) }, key, secret));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv, additionalData: aad(listener.sid, listener.purpose, listener.pub, epk) }, key, secret as Uint8Array<ArrayBuffer>));
     secret.fill(0);
     return await new Promise<boolean>((resolve) => {
       const done = (ok: boolean) => {
