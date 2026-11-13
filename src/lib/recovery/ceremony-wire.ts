@@ -1,15 +1,16 @@
 /**
- * Transport form of a 2-of-3 recovery ceremony: every envelope as standard
- * base64, so it crosses server functions and the database as plain text.
- * Contains only ciphertext; no factor, share or key.
+ * Transport form of a recovery ceremony: every envelope as standard base64, so
+ * it crosses server functions and the database as plain text. Contains only
+ * ciphertext; no factor, share or key. A ROUT Card shard (nfc_card) present
+ * means version 2 (2-of-4); absent means version 1 (2-of-3).
  */
-import type { RecoveryCeremony, RecoveryFactor } from "@/lib/crypto-enclave/recovery-mpc";
+import type { CoreFactor, RecoveryCeremony } from "@/lib/crypto-enclave/recovery-mpc";
 
 export type CeremonyWire = {
   ceremonyId: string;
   keyId: string;
   sealedMaster: string;
-  shards: Record<RecoveryFactor, string>;
+  shards: Record<CoreFactor, string> & { nfc_card?: string };
 };
 
 export const CEREMONY_ID_RE = /^[0-9a-f]{32}$/;
@@ -32,24 +33,21 @@ export function fromB64(value: string): Uint8Array {
 }
 
 export function ceremonyToWire(c: RecoveryCeremony, keyId: string): CeremonyWire {
+  const core = { device_prf: toB64(c.shards.device_prf), paper_guardian: toB64(c.shards.paper_guardian), server_guardian: toB64(c.shards.server_guardian) };
   return {
     ceremonyId: c.ceremonyId,
     keyId,
     sealedMaster: toB64(c.sealedMaster),
-    shards: { device_prf: toB64(c.shards.device_prf), paper_guardian: toB64(c.shards.paper_guardian), server_guardian: toB64(c.shards.server_guardian) },
+    shards: c.version === 2 ? { ...core, nfc_card: toB64(c.shards.nfc_card) } : core,
   };
 }
 
 export function ceremonyFromWire(w: CeremonyWire, memberId: string): RecoveryCeremony {
   if (!CEREMONY_ID_RE.test(w.ceremonyId)) throw new TypeError("invalid_ceremony");
-  return {
-    version: 1,
-    ceremonyId: w.ceremonyId,
-    memberId,
-    threshold: 2,
-    sealedMaster: fromB64(w.sealedMaster),
-    shards: { device_prf: fromB64(w.shards.device_prf), paper_guardian: fromB64(w.shards.paper_guardian), server_guardian: fromB64(w.shards.server_guardian) },
-  };
+  const base = { ceremonyId: w.ceremonyId, memberId, threshold: 2 as const, sealedMaster: fromB64(w.sealedMaster) };
+  const core = { device_prf: fromB64(w.shards.device_prf), paper_guardian: fromB64(w.shards.paper_guardian), server_guardian: fromB64(w.shards.server_guardian) };
+  const card = w.shards.nfc_card;
+  return card === undefined || card === null ? { ...base, version: 1, shards: core } : { ...base, version: 2, shards: { ...core, nfc_card: fromB64(card) } };
 }
 
 /** Number of words typed so far (for enabling a button; the words themselves are not kept). */
