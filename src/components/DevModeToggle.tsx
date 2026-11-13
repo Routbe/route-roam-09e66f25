@@ -8,6 +8,7 @@ export function DevModeToggle() {
   const navigate = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [visible, setVisible] = useState(false);
+  const [open, setOpen] = useState(false);
   useEffect(() => setVisible(canSwitchShellMode()), []);
   if (!visible) return null;
   // The admin sign-in lives on /auth too, so the stored override decides there.
@@ -24,16 +25,20 @@ export function DevModeToggle() {
   };
 
   // Studio has its own fixed bottom action bar below lg; the switch would cover it.
+  // On phones the switch collapses to one small chip so it never covers page content.
   return (
-    <div role="group" aria-label="Weergave wisselen" className={cn("fixed bottom-4 right-4 z-[100] flex items-center gap-1 rounded-full border-2 border-primary bg-background p-1 text-sm font-medium shadow-xl", path.startsWith("/studio") && "hidden lg:flex")}>
-      <span className="px-2 text-xs uppercase tracking-wide text-muted-foreground">Omgeving</span>
+    <div role="group" aria-label="Weergave wisselen" className={cn("fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-[100] flex items-center gap-1 rounded-full border-2 border-primary bg-background p-1 text-sm font-medium shadow-xl", path.startsWith("/studio") && "hidden lg:flex")}>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)} className="min-h-11 rounded-full px-3 text-xs uppercase tracking-wide text-muted-foreground sm:hidden">
+        {open ? "×" : active === "public" ? "Publiek" : "Admin"}
+      </button>
+      <span className="hidden px-2 text-xs uppercase tracking-wide text-muted-foreground sm:inline">Omgeving</span>
       {(["public", "admin"] as const).map((m) => (
         <button
           key={m}
           type="button"
           aria-pressed={active === m}
           onClick={() => pick(m)}
-          className={cn("rounded-full px-3 py-1", active === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+          className={cn("min-h-11 rounded-full px-3 sm:min-h-0 sm:py-1", open ? "inline-flex items-center" : "hidden sm:inline-flex sm:items-center", active === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
         >
           {m === "public" ? "Publiek" : "Admin"}
         </button>
