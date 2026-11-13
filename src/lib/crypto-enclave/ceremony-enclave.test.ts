@@ -120,3 +120,57 @@ describe("2-of-3 ceremony in the crypto enclave", () => {
     expect(await code("ceremony.restore", { userId: bob, ceremony: { ...structuredClone(ceremony), memberId: bob }, keyId, paperWords: paper, prf: prfOf(5) })).toBe("decrypt_failed");
   });
 });
+
+describe("2-of-4 ceremony with the ROUT Card in the crypto enclave", () => {
+  const cardOf = (n: number) => new Uint8Array(32).map((_, i) => (i * 13 + n) & 0xff);
+
+  it("a tapped card makes it version 2; card + one other factor restore on a new device, the card alone does not", async () => {
+    const userId = "00000000-0000-4000-8000-0000000000d1";
+    const card = cardOf(3);
+    const begun = await call("ceremony.begin", { userId, serverFactorKey: serverFactorPublicKey(userId, SECRET), cardSecret: card });
+    expect(begun.version).toBe(2);
+    expect(card.every((b) => b === 0)).toBe(true); // wiped inside the worker
+    const words = begun.paperWords.split(" ");
+    const answers = begun.checkPositions.map((position) => ({ position, word: words[position - 1] ?? "" }));
+    await call("ceremony.checkWords", { handle: begun.handle, answers });
+    const sealed = await call("ceremony.sealDevice", { handle: begun.handle, prf: prfOf(6) });
+    const ceremony = sealed.ceremony as RecoveryCeremony;
+    expect(ceremony.version).toBe(2);
+    const { keyId } = await call("ceremony.commit", { handle: begun.handle, userId });
+
+    await forgetDeviceKey(userId);
+    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3) })).toBe("decrypt_failed");
+    await forgetDeviceKey(userId);
+    expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), paperWords: begun.paperWords })).keyId).toBe(keyId);
+    await forgetDeviceKey(userId);
+    const serverShare = openServerShard(ceremony, userId, SECRET);
+    expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), serverShare })).keyId).toBe(keyId);
+    await forgetDeviceKey(userId);
+    expect((await call("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(3), prf: prfOf(6) })).keyId).toBe(keyId);
+    // Another card does not count as the card factor.
+    await forgetDeviceKey(userId);
+    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(4), paperWords: begun.paperWords })).toBe("decrypt_failed");
+  });
+
+  it("refuses a card secret that is not 32 bytes, and a card on a 2-of-3 ceremony", async () => {
+    const userId = "00000000-0000-4000-8000-0000000000d2";
+    expect(await code("ceremony.begin", { userId, serverFactorKey: serverFactorPublicKey(userId, SECRET), cardSecret: new Uint8Array(31) })).toBe("invalid_input");
+    const { ceremony, keyId, paper } = await setup(userId);
+    expect(ceremony.version).toBe(1);
+    await forgetDeviceKey(userId);
+    expect(await code("ceremony.restore", { userId, ceremony, keyId, cardSecret: cardOf(1), paperWords: paper })).toBe("decrypt_failed");
+  });
+
+  it("a stored version 2 ceremony without its card shard is refused as input", async () => {
+    const userId = "00000000-0000-4000-8000-0000000000d3";
+    const begun = await call("ceremony.begin", { userId, serverFactorKey: serverFactorPublicKey(userId, SECRET), cardSecret: cardOf(9) });
+    const words = begun.paperWords.split(" ");
+    await call("ceremony.checkWords", { handle: begun.handle, answers: begun.checkPositions.map((position) => ({ position, word: words[position - 1] ?? "" })) });
+    const sealed = await call("ceremony.sealDevice", { handle: begun.handle, prf: prfOf(2) });
+    const { keyId } = await call("ceremony.commit", { handle: begun.handle, userId });
+    const c = sealed.ceremony as RecoveryCeremony & { shards: Record<string, Uint8Array> };
+    const { nfc_card: _gone, ...core } = c.shards;
+    await forgetDeviceKey(userId);
+    expect(await code("ceremony.restore", { userId, ceremony: { ...c, shards: core }, keyId, prf: prfOf(2), paperWords: begun.paperWords })).toBe("invalid_input");
+  });
+});
