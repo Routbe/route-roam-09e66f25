@@ -10,7 +10,7 @@ import { SOCIAL_LINKS, GITHUB_ACCOUNT } from "@/lib/social-links";
 export const GITHUB_REPO = GITHUB_ACCOUNT;
 
 // Every footer link is a full 44px row (WCAG 2.5.5 AAA), so lists carry no extra gap.
-const linkClass = "inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors text-left";
+const linkClass = "inline-flex min-h-11 min-w-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors text-left";
 
 const headingClass =
   "text-[11px] font-mono tracking-wider uppercase text-muted-foreground font-semibold";
