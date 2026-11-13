@@ -223,7 +223,7 @@ export function completeRecoveryCeremony(draft: CeremonyDraft, deviceShare: Uint
       plaintext: deviceShare,
       context: shardContext(draft.version, draft.memberId, draft.ceremonyId, "device_prf"),
     });
-    const base = { ceremonyId: draft.ceremonyId, memberId: draft.memberId, threshold: RECOVERY_THRESHOLD, sealedMaster: draft.sealedMaster };
+    const base = { ceremonyId: draft.ceremonyId, memberId: draft.memberId, threshold: RECOVERY_THRESHOLD as typeof RECOVERY_THRESHOLD, sealedMaster: draft.sealedMaster };
     const core = { device_prf, paper_guardian: draft.shards.paper_guardian, server_guardian: draft.shards.server_guardian };
     if (draft.version === 2) {
       if (!draft.shards.nfc_card) throw new TypeError("card_shard_missing");
