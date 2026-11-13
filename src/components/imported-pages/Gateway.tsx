@@ -311,12 +311,12 @@ export default function Gateway() {
                 autoCapitalize="none"
                 spellCheck={false}
                 enterKeyHint="go"
-                className="h-10 min-w-0 flex-1 bg-transparent font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                className="h-11 min-w-0 flex-1 bg-transparent font-mono text-sm text-foreground outline-none placeholder:text-muted-foreground"
               />
               <Button
                 type="submit"
                 size="icon"
-                className="infra-action h-10 w-10 shrink-0"
+                className="infra-action h-11 w-11 shrink-0"
                 disabled={intent.kind === "empty" || intent.kind === "unknown"}
                 aria-label={t("gateway.submit")}
               >
