@@ -78,7 +78,7 @@ export function AppLayout({
                     aria-label={t("ui.breadcrumb")}
                     className="mb-2 flex items-center gap-1 text-xs text-muted-foreground"
                   >
-                    <Link to="/" className="hover:text-foreground">
+                    <Link to="/" className="tap-wide inline-flex min-h-11 items-center hover:text-foreground">
                       ROUT
                     </Link>
                     {crumbs.map((c) => (
@@ -131,7 +131,7 @@ export function AppLayout({
         )}
       >
         <div className="container mx-auto flex h-16 items-center gap-4 px-4">
-          <Link to="/" className="shrink-0" aria-label={t("ui.routHome")}>
+          <Link to="/" className="inline-flex min-h-11 shrink-0 items-center" aria-label={t("ui.routHome")}>
             <RoutLogo size={28} />
           </Link>
           <div className="hidden sm:block">
@@ -139,7 +139,7 @@ export function AppLayout({
           </div>
 
           <div className="ml-auto flex items-center gap-2">
-            <Link to="/explore" className="hidden px-2 text-sm text-muted-foreground hover:text-foreground sm:inline">
+            <Link to="/explore" className="hidden min-h-11 items-center px-2 text-sm text-muted-foreground hover:text-foreground sm:inline-flex">
               {t("explore.crumb")}
             </Link>
             <HeaderControls>

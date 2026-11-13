@@ -78,7 +78,7 @@ export function MobileMenu({ className }: { className?: string }) {
         aria-label={t("menu.open")}
         className={
           className ??
-          "h-10 w-10 shrink-0 rounded-full"
+          "h-11 w-11 shrink-0 rounded-full"
         }
       >
         <Menu className="h-5 w-5" strokeWidth={1.8} />

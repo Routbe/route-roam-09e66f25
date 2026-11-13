@@ -9,7 +9,8 @@ import { SOCIAL_LINKS, GITHUB_ACCOUNT } from "@/lib/social-links";
 
 export const GITHUB_REPO = GITHUB_ACCOUNT;
 
-const linkClass = "text-sm text-muted-foreground hover:text-foreground transition-colors text-left";
+// Every footer link is a full 44px row (WCAG 2.5.5 AAA), so lists carry no extra gap.
+const linkClass = "tap-wide inline-flex min-h-11 items-center text-sm text-muted-foreground hover:text-foreground transition-colors text-left";
 
 const headingClass =
   "text-[11px] font-mono tracking-wider uppercase text-muted-foreground font-semibold";
@@ -95,7 +96,7 @@ export function Footer() {
         <div className="min-w-0 space-y-3">
           {/* Altijd naar de root van de huidige omgeving — nooit een preview-host. */}
           <div className="flex items-center justify-between gap-3">
-            <Link to="/" aria-label={t("footer.home")} className="inline-flex shrink-0">
+            <Link to="/" aria-label={t("footer.home")} className="inline-flex min-h-11 shrink-0 items-center">
               <RoutLogo size={24} />
             </Link>
             <LocaleDropdown />
@@ -103,7 +104,7 @@ export function Footer() {
           <p className="max-w-xs text-sm text-muted-foreground">{t("footer.tagline")}</p>
           <div
             data-testid="footer-socials"
-            className="flex flex-wrap items-center gap-3 pt-1 sm:gap-4"
+            className="-ml-3 flex flex-wrap items-center gap-1"
           >
             {SOCIALS.map(({ href, label, Icon }) => (
               <a
@@ -112,7 +113,7 @@ export function Footer() {
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label={label}
-                className="flex size-5 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                className="flex size-11 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
               >
                 <Icon className="size-5 shrink-0" aria-hidden />
               </a>
@@ -121,9 +122,9 @@ export function Footer() {
         </div>
 
         <div className="mt-6 grid grid-cols-2 items-start gap-x-6 gap-y-6 sm:gap-8 md:grid-cols-4">
-          <nav className="min-w-0 space-y-3">
+          <nav className="min-w-0 space-y-1">
             <p className={headingClass}>{t("footer.col.platform")}</p>
-            <ul className="space-y-1.5">
+            <ul>
               {PLATFORM.map((l) => (
                 <li key={l.to}>
                   <Link to={l.to} className={linkClass}>
@@ -134,9 +135,9 @@ export function Footer() {
             </ul>
           </nav>
 
-          <nav className="min-w-0 space-y-3">
+          <nav className="min-w-0 space-y-1">
             <p className={headingClass}>{t("footer.col.infrastructure")}</p>
-            <ul className="space-y-1.5">
+            <ul>
               {INFRASTRUCTURE.map((l) => (
                 <li key={l.to}>
                   <Link to={l.to} className={linkClass}>
@@ -147,9 +148,9 @@ export function Footer() {
             </ul>
           </nav>
 
-          <nav className="min-w-0 space-y-3">
+          <nav className="min-w-0 space-y-1">
             <p className={headingClass}>{t("footer.col.ecosystem")}</p>
-            <ul className="space-y-1.5">
+            <ul>
               {ECOSYSTEM.map((l) =>
                 "href" in l ? (
                   <li key={t(l.label)}>
@@ -173,9 +174,9 @@ export function Footer() {
             </ul>
           </nav>
 
-          <nav data-testid="footer-support-nav" className="min-w-0 space-y-3">
+          <nav data-testid="footer-support-nav" className="min-w-0 space-y-1">
             <p className={headingClass}>{t("footer.col.support")}</p>
-            <ul className="space-y-1.5">
+            <ul>
               {SUPPORT.map((l) => (
                 <li key={l.to}>
                   <Link to={l.to} className={linkClass}>
@@ -201,8 +202,8 @@ export function Footer() {
             </a>
           </p>
           <StatusWidget className="font-mono text-xs" />
-          <Link to="/about/ai-agents" className="text-[10px] text-muted-foreground/60 hover:text-foreground" data-agent-entry="/.well-known/rout-agent.json">
-            Voor AI-agents
+          <Link to="/about/ai-agents" className="inline-flex min-h-11 items-center text-xs text-muted-foreground hover:text-foreground" data-agent-entry="/.well-known/rout-agent.json">
+            {t("footer.aiAgents")}
           </Link>
 
         </div>

@@ -24,6 +24,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { BOOT_SCRIPT, DEFAULT_UI_PREFERENCES, isInternalInterface } from "@/lib/internal-interface-theme";
 import { readRequestUiPreferences } from "@/lib/ui-preferences-request";
+import { readRequestLocale } from "@/lib/locale-request";
 import { UiPreferencesSeed, useUiPreferences } from "@/hooks/useUiPreferences";
 import { UiPreferenceAccountSync } from "@/components/settings/UiPreferenceAccountSync";
 import { KeyHaptics } from "@/components/settings/KeyHaptics";
@@ -37,10 +38,11 @@ import { ErrorBoundary, StaleChunkReload, willAutoReload } from "@/components/Er
 import { LanguageSync } from "@/components/LanguageSync";
 import "@/lib/env";
 import { notFound, redirect } from "@tanstack/react-router";
+import PublicAppShell from "@/components/shells/PublicAppShell";
 import { appMode, detectShellMode, isAdminMode, isAdminPath, isModeFixed, modeDecision } from "@/lib/app-mode";
 
-// Shells load lazily; the public build statically drops the admin shell (dead branch), so no admin code leaks.
-const PublicAppShell = lazy(() => import("@/components/shells/PublicAppShell"));
+// The public shell is imported statically: a lazy root boundary blanked every server-rendered page while
+// it hydrated. Only the admin shell loads lazily; the public build statically drops it (dead branch).
 const AdminAppShell =
   import.meta.env["VITE_APP_MODE"] === "public" ? null : lazy(() => import("@/components/shells/AdminAppShell"));
 
@@ -126,7 +128,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     const d = modeDecision(appMode(), location.pathname);
     if (d.kind === "notFound") throw notFound();
     if (d.kind === "redirect") throw redirect({ href: d.to });
-    return { uiPreferences: await readRequestUiPreferences() };
+    const [uiPreferences, locale] = await Promise.all([readRequestUiPreferences(), readRequestLocale()]);
+    return { uiPreferences, locale };
   },
   head: () => ({
     meta: [
@@ -183,9 +186,10 @@ function RootShell({ children }: { children: ReactNode }) {
   const routeIds = useMatches({ select: matches => matches.map(match => match.routeId) });
   const internalUi = isInternalInterface(pathname, routeIds);
   const seed = Route.useRouteContext({ select: context => context.uiPreferences }) ?? DEFAULT_UI_PREFERENCES;
+  const locale = Route.useRouteContext({ select: context => context.locale }) ?? "en";
   return (
     <UiPreferencesSeed.Provider value={seed}>
-      <DocumentShell internalUi={internalUi}>{children}</DocumentShell>
+      <DocumentShell internalUi={internalUi} locale={locale}>{children}</DocumentShell>
     </UiPreferencesSeed.Provider>
   );
 }
@@ -194,10 +198,10 @@ function RootShell({ children }: { children: ReactNode }) {
  * Server HTML already carries the cookie-mirrored material and explicit colour
  * mode; BOOT_SCRIPT corrects device-only or system choices before first paint.
  */
-function DocumentShell({ internalUi, children }: { internalUi: boolean; children: ReactNode }) {
+function DocumentShell({ internalUi, locale, children }: { internalUi: boolean; locale: string; children: ReactNode }) {
   const { material, mode } = useUiPreferences();
   return (
-    <html lang="en" className={mode === "dark" ? "dark" : undefined} data-workspace-ui={internalUi ? "internal" : undefined}
+    <html lang={locale} className={mode === "dark" ? "dark" : undefined} data-workspace-ui={internalUi ? "internal" : undefined}
       data-theme={internalUi ? material : undefined} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }} />
@@ -216,6 +220,7 @@ function DocumentShell({ internalUi, children }: { internalUi: boolean; children
 function RootComponent() {
   useLiquidGlassRuntime();
   const { queryClient } = Route.useRouteContext();
+  const serverLocale = Route.useRouteContext({ select: context => context.locale });
   const router = useRouter();
 
   useEffect(() => {
@@ -231,7 +236,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <I18nProvider>
+        <I18nProvider serverLocale={serverLocale}>
           <TooltipProvider>
             <Toaster />
             <Sonner />

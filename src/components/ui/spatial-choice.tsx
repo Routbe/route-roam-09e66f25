@@ -35,7 +35,7 @@ export function SpatialChoice<T extends string>({ value, options, onChange, labe
         target?.focus();
         onChange(next.value);
       }}
-      className={cn("spatial-tab min-w-max max-w-none flex-[1_0_auto] shrink-0 justify-center gap-1.5 whitespace-nowrap px-3 text-xs [&_svg]:shrink-0", value === option.value ? "text-foreground" : "text-muted-foreground")}>
+      className={cn("spatial-tab min-h-11 min-w-max max-w-none flex-[1_0_auto] shrink-0 justify-center gap-1.5 whitespace-nowrap px-3 text-xs [&_svg]:shrink-0", value === option.value ? "text-foreground" : "text-muted-foreground")}>
       {value === option.value && <motion.span aria-hidden className="spatial-indicator" layoutId={`choice-${id}`} initial={false} transition={reduced ? { duration: 0 } : snappySpringPreset} />}
       {option.label}
     </Button>)}

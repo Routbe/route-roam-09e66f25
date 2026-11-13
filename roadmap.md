@@ -88,6 +88,13 @@
 ## Vervolg 2026-11-13 (goedgekeurd plan)
 - [x] Stap 0: 0265 greatest/least hersteld, naar db-pending tot GO
 - [x] Stap 0: volledige testsuite groen (2805/2805)
-- [ ] Fase A: 12 formaten + liggend — meting gedaan (geen overloop gevonden), 9-delige reeks afsnijden opgelost, wisselknop compact op gsm; nog: CLS/AAA/tikdoelen-rapport, ontwerpverfijning, OG-controle per pagina
+- [x] Fase A: 12 formaten + liggend — geen overloop; 9-delige reeks en omgevingsknop op gsm opgelost
+- [x] Fase A: taal al juist vanaf de server (geen Engels→Nederlands-wissel meer), lege flits bij laden weg; verspringen (CLS) overal < 0,07
+- [x] Fase A: alle knoppen en links op de gemeten openbare pagina's ≥ 44×44 px (AAA), grijze tekst ≥ 7:1 contrast
+- [ ] Fase A: OG-afbeelding/omschrijving per pagina en per taal nalopen; overige openbare pagina's (qr-, guide-, compare-, support-) door dezelfde meting
 - [ ] Fase B: zero-knowledge (client-side E2EE, blinde indexen, grootboek-invarianten) vanaf de eerste migratie
 - [ ] Fase G: W3C Verifiable Credentials / selectief-onthullend bewijs voor gastverificatie
+- [ ] Fase B+: E2EE-sleutels onder bestaande 2-van-3 Shamir-herstel (let op: huidige ceremonie = toestel-passkey + papieren sleutel + server-guardian; de NXP-kaart is nu een apart herstelslot, geen derde deel — keuze eigenaar nodig)
+- [ ] Fase B+: alle E2EE en RVE1-enveloppen hybride post-quantum (ML-KEM-1024)
+- [ ] Fase B+: vaste byte-lengtes (padding) en constante responstijden voor boekings- en bitmasker-API's
+- [ ] Fase B+: Omni-werker als blinde doorgeefluik, nooit toegang tot persoonlijke sleutels

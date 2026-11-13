@@ -38,7 +38,7 @@ export function DevModeToggle() {
           type="button"
           aria-pressed={active === m}
           onClick={() => pick(m)}
-          className={cn("min-h-11 rounded-full px-3 sm:min-h-0 sm:py-1", open ? "inline-flex items-center" : "hidden sm:inline-flex sm:items-center", active === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
+          className={cn("min-h-11 rounded-full px-3", open ? "inline-flex items-center" : "hidden sm:inline-flex sm:items-center", active === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground")}
         >
           {m === "public" ? "Publiek" : "Admin"}
         </button>

@@ -626,6 +626,7 @@
   "footer.dynamic": "Routage dynamique",
   "footer.generator": "Générateur de QR",
   "footer.home": "Accueil ROUT",
+  "footer.aiAgents": "Pour les agents IA",
   "footer.license": "Open Source (AGPLv3)",
   "footer.link.batch": "Moteur de lots",
   "footer.link.console": "Console développeur",
