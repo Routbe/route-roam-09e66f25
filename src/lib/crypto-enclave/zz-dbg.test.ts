@@ -22,6 +22,9 @@ it("dbg", async () => {
   console.log("DBG commit", JSON.stringify(c2).slice(0,100));
   const { forgetDeviceKey } = await import("@/lib/e2ee/device-key");
   await forgetDeviceKey(userId);
+  const sm = c.sealedMaster.slice(); const dv = c.shards.device_prf.slice();
+  const r0 = await runEnclaveOp("ceremony.restore", { userId, ceremony: c, keyId: (c2 as any).result.keyId, cardSecret: new Uint8Array(32).fill(3) });
+  console.log("DBG r0", JSON.stringify(r0), "sealed same", sm.every((x,i)=>x===c.sealedMaster[i]), "dev same", dv.every((x,i)=>x===c.shards.device_prf[i]));
   const r = await runEnclaveOp("ceremony.restore", { userId, ceremony: c, keyId: (c2 as any).result.keyId, prf: new Uint8Array(32).fill(6), paperWords: b.paperWords });
   console.log("DBG restore", JSON.stringify(r));
 });
