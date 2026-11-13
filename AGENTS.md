@@ -44,6 +44,11 @@ use the editor.
 ## Interface materials
 - Keep workspace material preferences separate from colour mode; activate root data-theme only for authenticated tools and QR/Studio routes, including their portals, and exclude profile/QR/export artwork. Why: the public gateway retains the imported appearance and Creator restores legacy materials without altering user designs.
 
+## Server-rendered language and hydration
+- The root route negotiates the locale on the server (rout_lang cookie, then Accept-Language; src/lib/locale-negotiation.ts) and passes it to I18nProvider and <html lang>; on the server, direct i18n.t() calls translate in the request's locale (src/lib/i18n-request.server.ts, installed in src/server.ts). Why: a first frame in the wrong language swapped all text after hydration and forced server-rendered Suspense boundaries back to loading.
+- Root-level boundaries never wrap a lazy public shell, and MDX doc pages are preloaded in the router's hydrate hook (src/components/mdx/doc-modules.ts). Why: a still-loading lazy module during hydration blanks the server HTML on any provider update.
+- Public controls are at least 44x44 px (WCAG 2.5.5 AAA); compact chips draw their visible pill inside the larger button and short text links use the tap-wide utility. Why: touch targets grow without changing the look.
+
 ## Discover pages
 - Product landing pages live at /discover/<topic>; slugs, main buttons and detail links come from src/lib/discover/topics.ts and per-locale copy from copy.<locale>.ts, with accents in src/styles/discover.css. Why: one source keeps the home page, detail-page buttons and sitemap pointing at the same product pages instead of the sign-in wall.
 
