@@ -168,11 +168,19 @@ const I18nContext = createContext<I18nValue | null>(null);
 export function I18nProvider({
   children,
   initialLocale,
+  serverLocale,
 }: {
   children: ReactNode;
   initialLocale?: Locale;
+  /** Locale the server rendered with (cookie / Accept-Language); the first client frame must match it. */
+  serverLocale?: Locale;
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale ?? "en");
+  const startLocale = initialLocale ?? serverLocale ?? "en";
+  const [locale, setLocaleState] = useState<Locale>(() => {
+    // Align the shared instance before the first client render so useTranslation() hydrates the server text.
+    if (typeof window !== "undefined" && i18next.language !== startLocale) void i18next.changeLanguage(startLocale);
+    return startLocale;
+  });
 
   const setLocale = useCallback((l: Locale) => {
     setLocaleState(l);
@@ -186,12 +194,14 @@ export function I18nProvider({
     void i18next.changeLanguage(l);
   }, []);
 
-  // Detect once on mount unless a route pinned the locale explicitly.
+  // After hydration: a route pin wins; otherwise only an explicit device choice the server could not see
+  // (localStorage without cookie) changes the language. No change, no re-render: a needless languageChanged
+  // event would force server-rendered Suspense boundaries back to their loading state.
   useEffect(() => {
-    const next = initialLocale ?? detectLocale();
-    setLocaleState(next);
-    void i18next.changeLanguage(next);
-  }, [initialLocale]);
+    const next = initialLocale ?? (serverLocale === undefined || hasExplicitLocale() ? detectLocale() : serverLocale);
+    setLocaleState((current) => (current === next ? current : next));
+    if (i18next.language !== next) void i18next.changeLanguage(next);
+  }, [initialLocale, serverLocale]);
 
   useEffect(() => {
     document.documentElement.lang = locale;
@@ -208,8 +218,14 @@ export function I18nProvider({
     [locale, setLocale, applyLocale, t],
   );
 
+  // Server: one instance per rendered locale (shared resources), so concurrent requests never share a language.
+  const instance = useMemo(
+    () => (typeof window === "undefined" ? i18next.cloneInstance({ lng: locale, initAsync: false }) : i18next),
+    [locale],
+  );
+
   return (
-    <I18nextProvider i18n={i18next}>
+    <I18nextProvider i18n={instance}>
       <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
     </I18nextProvider>
   );
