@@ -1592,6 +1592,11 @@ html[data-liquid]:not([data-theme="mechanical"]) [style*="--lg-filter"] { backdr
   isolation: isolate;
   background-image: radial-gradient(140px circle at var(--mouse-x, 50%) var(--mouse-y, 0%), var(--spatial-indicator), var(--optical-clear));
 }
+/* Widens a short text link's touch area to 44 px without moving its text (WCAG 2.5.5 AAA). */
+@utility tap-wide {
+  position: relative;
+  &::after { content: ""; position: absolute; inset-block: 0; left: 50%; width: max(100%, 2.75rem); transform: translateX(-50%); }
+}
 @utility spatial-control-slot {
   position: relative;
   isolation: isolate;

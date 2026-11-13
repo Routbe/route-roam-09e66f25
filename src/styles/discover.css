@@ -426,7 +426,8 @@
    the enlarged hit area as a second, outer pill. */
 .gateway-editorial :is(.infra-action, .story-chapter-cta, [data-spatial-control]) { min-height: 2.75rem; }
 .dsc-crumbs { align-items: center; margin-block: -15px 13px; }
-.dsc-crumbs a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+.dsc-crumbs a { position: relative; display: inline-flex; align-items: center; min-height: 44px; }
+.dsc-crumbs a::after { content: ""; position: absolute; inset-block: 0; left: 50%; width: max(100%, 44px); transform: translateX(-50%); }
 @media (max-width: 639px) {
   .chapter-deck-tabs { padding-bottom: 7px; }
   .chapter-deck .chapter-deck-tabs > button[type="button"][data-topic] { position: relative; isolation: isolate; display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; border: 0; background: none; box-shadow: none; backdrop-filter: none; }
